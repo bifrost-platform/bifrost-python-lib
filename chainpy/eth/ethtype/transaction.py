@@ -12,12 +12,12 @@ from rlp.sedes import (
     big_endian_int, binary, Binary
 )
 
-from src.chainpy.eth.ethtype.account import EthAccount
-from src.chainpy.eth.ethtype.amount import EthAmount
-from src.chainpy.eth.ethtype.dataclassmeta import EthHashBytesMeta, IntegerMeta, EthHexBytesMeta, EthAddrMeta
-from src.chainpy.eth.ethtype.exceptions import EthTypeError
-from src.chainpy.eth.ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
-from src.chainpy.eth.ethtype.utils import is_hex, ETH_HASH
+from chainpy.eth.ethtype.account import EthAccount
+from chainpy.eth.ethtype.amount import EthAmount
+from chainpy.eth.ethtype.dataclassmeta import EthHashBytesMeta, IntegerMeta, EthHexBytesMeta, EthAddrMeta
+from chainpy.eth.ethtype.exceptions import EthTypeError
+from chainpy.eth.ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
+from chainpy.eth.ethtype.utils import is_hex, ETH_HASH
 
 dynamic_unsigned_transaction_fields = (
     ('chainId', big_endian_int),

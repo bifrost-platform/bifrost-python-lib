@@ -1,7 +1,7 @@
 import logging.handlers
 
-from src.chainpy.eth.ethtype.consts import ChainIndex
-from src.chainpy.eth.ethtype.hexbytes import EthAddress
+from chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.hexbytes import EthAddress
 
 
 class LoggerSetting:

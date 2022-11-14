@@ -1,7 +1,7 @@
 import json
 
-from src.chainpy.eth.ethtype.amount import EthAmount
-from src.chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.amount import EthAmount
+from chainpy.eth.ethtype.consts import ChainIndex
 
 
 def test_manager_init(ganache_eth_chain_manager):

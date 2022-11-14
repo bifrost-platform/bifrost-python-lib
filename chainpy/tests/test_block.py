@@ -1,8 +1,8 @@
 from typing import List
 
-from src.chainpy.eth.ethtype.chaindata import EthBlock, EthTransaction
-from src.chainpy.eth.ethtype.dataclassmeta import hex_to_int
-from src.chainpy.eth.ethtype.hexbytes import EthHashBytes
+from chainpy.eth.ethtype.chaindata import EthBlock, EthTransaction
+from chainpy.eth.ethtype.dataclassmeta import hex_to_int
+from chainpy.eth.ethtype.hexbytes import EthHashBytes
 
 
 def check_block_basic(fixture: dict, block: EthBlock, expected_verbose: bool, expected_block_type: int):

@@ -3,12 +3,12 @@ from queue import PriorityQueue
 from typing import Union
 import time
 
-from src.chainpy.eventbridge.chaineventabc import ChainEventABC
-from src.chainpy.eventbridge.periodiceventabc import PeriodicEventABC
-from src.chainpy.eventbridge.utils import timestamp_msec
-from src.chainpy.eth.managers.configs import EntityRootConfig
-from src.chainpy.eth.managers.multichainmanager import MultiChainManager
-from src.chainpy.logger import Logger, formatted_log
+from chainpy.eventbridge.chaineventabc import ChainEventABC
+from chainpy.eventbridge.periodiceventabc import PeriodicEventABC
+from chainpy.eventbridge.utils import timestamp_msec
+from chainpy.eth.managers.configs import EntityRootConfig
+from chainpy.eth.managers.multichainmanager import MultiChainManager
+from chainpy.logger import Logger, formatted_log
 
 
 queue_logger = Logger("EventQueue", logging.INFO)

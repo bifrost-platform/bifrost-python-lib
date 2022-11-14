@@ -2,9 +2,9 @@ from typing import Union
 
 from dataclasses_json import config
 
-from src.chainpy.eth.ethtype.exceptions import EthNotHex
-from src.chainpy.eth.ethtype.hexbytes import EthHexBytes, EthHashBytes, EthAddress
-from src.chainpy.eth.ethtype.utils import is_hex
+from chainpy.eth.ethtype.exceptions import EthNotHex
+from chainpy.eth.ethtype.hexbytes import EthHexBytes, EthHashBytes, EthAddress
+from chainpy.eth.ethtype.utils import is_hex
 
 """
 {TYPE}Meta - store value as a specific "TYPE"

@@ -1,9 +1,9 @@
 import pytest
 
-from src.chainpy.eth.ethtype.consts import ChainIndex
-from src.chainpy.eth.ethtype.hexbytes import EthAddress
-from src.chainpy.eth.managers.configs import EntityRootConfig
-from src.chainpy.eth.managers.ethchainmanager import EthChainManager
+from chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.hexbytes import EthAddress
+from chainpy.eth.managers.configs import EntityRootConfig
+from chainpy.eth.managers.ethchainmanager import EthChainManager
 
 
 USER_CONFIG_PATH = "configs/entity.user.json"
