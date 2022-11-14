@@ -1,10 +1,9 @@
 import json
-import unittest
 from time import sleep
 
 import requests
 from requests.auth import HTTPBasicAuth
-from typing import Union, Optional
+from typing import Union
 
 
 BITCOIN_CONFIRMATION_HEIGHT = 6
