@@ -80,7 +80,7 @@ class EthTransaction:
     v: int = field(metadata=IntegerMeta, default_factory=int)
     transaction_index: int = field(metadata=IntegerMeta, default_factory=int)
     value: int = field(metadata=IntegerMeta, default_factory=int)
-    to: EthAddress = field(metadata=EthAddrMeta, default_factory=str)
+    to: Optional[EthAddress] = field(metadata=EthAddrMeta, default_factory=str)
 
     # optional depends on rpc versions
     type: Optional[int] = field(metadata=IntegerMeta, default_factory=int)
