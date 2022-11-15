@@ -56,6 +56,12 @@ class EthChainManager(EthTxHandler, EthEventHandler):
     def get_contract_by_name(self, contract_name: str) -> Optional[EthContract]:
         return self.__contracts_dict.get(contract_name)
 
+    def get_contract_by_addr(self, contract_addr: EthAddress) -> Optional[EthContract]:
+        for name, contract in self.__contracts_dict.items():
+            if contract.address == contract_addr:
+                return contract
+        return None
+
     def _get_contract_addr_and_build_tx_data(self, contract_name: str, method_name: str, method_params: list) -> tuple:
         contract = self.get_contract_by_name(contract_name)
         contract_addr = contract.address
