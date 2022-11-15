@@ -83,6 +83,7 @@ class EthTransaction:
     to: Optional[EthAddress] = field(metadata=EthAddrMeta, default_factory=str)
 
     # optional depends on rpc versions
+    creates: Optional[EthAddress] = field(metadata=EthAddrMeta, default_factory=str)
     type: Optional[int] = field(metadata=IntegerMeta, default_factory=int)
 
     # type 2 only
