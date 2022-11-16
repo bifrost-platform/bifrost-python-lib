@@ -116,9 +116,9 @@ class EthChainManager(EthTxHandler, EthEventHandler):
             tx_with_fee.set_nonce(self.issue_nonce)
             tx_hash = self.send_tx(tx_with_fee, self.__account)
             if tx_hash is None:
-                tx_hash = EthHashBytes.zero()
+                tx_hash = EthHashBytes.default()
         else:
-            tx_hash = EthHashBytes.zero()
+            tx_hash = EthHashBytes.default()
 
         return pre_processed_tx, tx_hash
 
@@ -126,7 +126,7 @@ class EthChainManager(EthTxHandler, EthEventHandler):
                              receiver: EthAddress,
                              value: EthAmount,
                              boost: bool = False) -> (EthTransaction, EthHashBytes):
-        raw_tx = self.build_tx(receiver, EthHexBytes.zero(), value)
+        raw_tx = self.build_tx(receiver, EthHexBytes.default(), value)
         return self.send_transaction(raw_tx, boost=boost)
 
     def native_balance(self, addr: EthAddress = None) -> EthAmount:

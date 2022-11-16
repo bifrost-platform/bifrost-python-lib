@@ -30,7 +30,7 @@ def check_block_basic(fixture: dict, block: EthBlock, expected_verbose: bool, ex
     nonce = fixture.get("nonce")
     assert block.nonce == (0 if nonce is None else hex_to_int(fixture["nonce"]))
     mix_hash = fixture.get("mixHash")
-    assert block.mix_hash == EthHashBytes.zero() if mix_hash is None else mix_hash
+    assert block.mix_hash == EthHashBytes.default() if mix_hash is None else mix_hash
 
     if block.type == 2:
         assert block.base_fee_per_gas == hex_to_int(fixture["baseFeePerGas"])
@@ -41,7 +41,7 @@ def check_block_basic(fixture: dict, block: EthBlock, expected_verbose: bool, ex
 def check_transaction_basic(fixture: dict, txs: List[EthTransaction], expected_verbosity: bool):
     for i, tx in enumerate(txs):
         # check params
-        actual_verbosity = tx.block_hash != EthHashBytes.zero()
+        actual_verbosity = tx.block_hash != EthHashBytes.default()
         assert actual_verbosity == expected_verbosity
 
         assert isinstance(tx, EthTransaction)

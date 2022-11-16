@@ -94,7 +94,7 @@ class EthTransaction:
     max_priority_fee_per_gas: Optional[int] = field(metadata=IntegerMeta, default_factory=int)
 
     def __post_init__(self):
-        if self.block_hash == EthHashBytes.zero():
+        if EthHashBytes.default() == self.block_hash:
             self.type = -1
         elif self.access_list is None:
             self.type = 0
@@ -271,7 +271,7 @@ def check_transaction_verbosity(values: list):
 
     criteria = values[0]
     if isinstance(criteria, EthTransaction):
-        return criteria.block_hash != EthHashBytes.zero()
+        return criteria.block_hash != EthHashBytes.default()
     else:
         if isinstance(criteria, dict):
             return True

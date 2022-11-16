@@ -14,7 +14,7 @@ class LoggerSetting:
 
 def formatted_log(
         logger_obj,
-        relayer_addr: EthAddress = EthAddress.zero(),
+        relayer_addr: EthAddress = EthAddress.default(),
         log_id: str = None,
         related_chain: ChainIndex = None,
         log_data: str = None):

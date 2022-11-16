@@ -130,7 +130,7 @@ class EventBridge(MultiChainMonitor):
                 log_data="txHash({}):nonce({})".format(tx_hash.hex(), tx.nonce)
             )
 
-            if tx_hash == EthHashBytes.zero():
+            if tx_hash == EthHashBytes.default():
                 """ expected fee issue """
                 formatted_log(
                     tx_sender_logger,

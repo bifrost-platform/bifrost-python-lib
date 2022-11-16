@@ -25,8 +25,10 @@ class EthHexBytes(bytes):
         return cast(EthHexBytes, super().__new__(cls, data))
 
     def __repr__(self) -> str:
-        class_name = str(type(self)).split(".")[-1].replace("'", "").replace(">", "")
-        return "{}({})".format(class_name, "0x" + bytes(self).hex())
+        return "{}({})".format(self.__class__.__name__, "0x" + self.hex())
+
+    def __str__(self) -> str:
+        return self.hex()
 
     def __eq__(self, other):
         if isinstance(other, EthHexBytes):
@@ -54,6 +56,8 @@ class EthHexBytes(bytes):
         return len(bytes(self))
 
     def hex(self, **kwargs) -> str:
+        if super() == b"":
+            return ""
         return "0x" + super().hex()
 
     def hex_without_0x(self) -> str:
@@ -66,8 +70,8 @@ class EthHexBytes(bytes):
         return bytes(self)
 
     @staticmethod
-    def zero():
-        return EthHexBytes("0x00", 32)
+    def default():
+        return EthHexBytes(b"", 32)
 
 
 class EthHashBytes(EthHexBytes):
@@ -87,7 +91,7 @@ class EthAddress(EthHexBytes):
         return checksum_encode(self.hex())
 
     @staticmethod
-    def zero():
+    def default():
         return EthAddress("0x0000000000000000000000000000000000000000")
 
 
