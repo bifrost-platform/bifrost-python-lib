@@ -1,13 +1,13 @@
 import binascii
 import unittest
 from string import hexdigits, digits
-from sha3 import keccak_256
+from Crypto.Hash import keccak
 from typing import Union, Any
 from .exceptions import EthTypeError, EthValueError
 
 ETH_EMPTY_BYTES = b""
 ETH_EMPTY_STRING = ""
-ETH_HASH = keccak_256
+ETH_HASH = keccak
 
 
 def hex_str_to_bytes(hex_str: str) -> bytes:
