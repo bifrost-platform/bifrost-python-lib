@@ -7,7 +7,7 @@ from .exceptions import EthTypeError, EthValueError
 
 ETH_EMPTY_BYTES = b""
 ETH_EMPTY_STRING = ""
-ETH_HASH = keccak
+ETH_HASH = lambda pre_hash: keccak.new(data=pre_hash, digest_bits=256)
 
 
 def hex_str_to_bytes(hex_str: str) -> bytes:
@@ -228,3 +228,8 @@ class TestFloatFunc(unittest.TestCase):
 
         case4 = 0.0000000000000000001
         self.assertRaises(Exception, _exp_notation_float_to_wei, (str(case4), 18))
+
+    def test_hash(self):
+        pre_hash = b"test"
+        result = ETH_HASH(pre_hash).hexdigest()
+        print(result)
