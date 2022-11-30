@@ -150,7 +150,7 @@ def checksum_encode(address: str) -> str:
     # encoding address to bytes
     norm_addr = address.replace("0x", "").lower()
     addr_bytes = norm_addr.encode("utf-8")
-    address_hash = keccak_256(addr_bytes).hexdigest()
+    address_hash = ETH_HASH(addr_bytes).hexdigest()
 
     checksum_address = "0x"
     for i in range(40):
@@ -163,7 +163,7 @@ def checksum_encode(address: str) -> str:
 
 def is_checksum_address(address: str) -> bool:
     address = address.replace('0x', '')
-    addr_hash = keccak_256(address.lower()).hexdigest()
+    addr_hash = ETH_HASH(address.lower()).hexdigest()
     for i in range(40):
         if int(addr_hash[i], 16) > 7 and address[i].upper() != address[i]:
             return False
@@ -233,3 +233,8 @@ class TestFloatFunc(unittest.TestCase):
         pre_hash = b"test"
         result = ETH_HASH(pre_hash).hexdigest()
         print(result)
+
+    def test_address_checksum(self):
+        address_with_checksum = "0x26590C501c0bAeFB72FFfF51E12b3423e2a5D07f"
+        result = checksum_encode(address_with_checksum.lower())
+        self.assertEqual(address_with_checksum, result)
