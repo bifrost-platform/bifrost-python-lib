@@ -85,28 +85,6 @@ class EthRpcClient:
     def url(self) -> str:
         return self.__url_with_access_key
 
-    def send_request_batch(self,
-                           methods: List[str],
-                           params: List[List[Any]],
-                           cnt: int = 0) -> Optional[List[Union[dict, str]]]:
-        # TODO not tested and handle error
-        if len(methods) != len(params):
-            raise Exception("Not matches numbers of methods and params")
-
-        bodies = list()
-        for i in range(len(methods)):
-            body = {
-                "jsonrpc": "2.0",
-                "method": methods[i],
-                "params": params[i],
-                "id": 1
-            }
-            bodies.append(body)
-
-        headers = {'Content-type': 'application/json'}
-
-        return requests.post(self.url, json=bodies, headers=headers).json()
-
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
         if cnt > MAX_RETRY_NUM:
             raise Exception("Exceeded max re-try cnt on {}".format(self.__chain_index))
