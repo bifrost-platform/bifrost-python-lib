@@ -1,0 +1,7 @@
+cryptography
+ecdsa
+eth-abi
+eth-account
+pycryptodome
+requests
+dataclasses-json

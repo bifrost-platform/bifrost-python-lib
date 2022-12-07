@@ -71,7 +71,8 @@ class EthHexBytes(bytes):
 
     @staticmethod
     def default():
-        return EthHexBytes(b"", 32)
+        """ return zero length bytes string """
+        return EthHexBytes(b"")
 
 
 class EthHashBytes(EthHexBytes):
@@ -91,7 +92,8 @@ class EthAddress(EthHexBytes):
         return checksum_encode(self.hex())
 
     @staticmethod
-    def default():
+    def zero():
+        """ return zero address """
         return EthAddress("0x0000000000000000000000000000000000000000")
 
 
@@ -146,3 +148,9 @@ class EthHexBytesTest(unittest.TestCase):
         self.assertEqual(data, "0x466D25b791FD4882e15aF01FC28a633014104B2b")
         self.assertRaises(Exception, data.hex() == "0x466D25b791FD4882e15aF01FC28a633014104B2b")
         self.assertEqual(data.with_checksum(), "0x466D25b791FD4882e15aF01FC28a633014104B2b")
+
+    def test_zero(self):
+        self.assertEqual(EthHexBytes.default(), b"")
+        self.assertEqual(EthHashBytes.default(), b"")
+        self.assertEqual(EthAddress.default(), b"")
+        self.assertEqual(EthAddress.zero(), "0x0000000000000000000000000000000000000000")
