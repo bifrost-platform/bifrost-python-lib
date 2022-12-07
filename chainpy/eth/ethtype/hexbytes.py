@@ -25,7 +25,7 @@ class EthHexBytes(bytes):
         return cast(EthHexBytes, super().__new__(cls, data))
 
     def __repr__(self) -> str:
-        return "{}({})".format(self.__class__.__name__, "0x" + self.hex())
+        return "{}({})".format(self.__class__.__name__, self.hex())
 
     def __str__(self) -> str:
         return self.hex()
@@ -34,11 +34,14 @@ class EthHexBytes(bytes):
         if isinstance(other, EthHexBytes):
             return bytes(self) == bytes(other)
         elif isinstance(other, int):
-            other_obj = EthHexBytes(other)
-            return self.int() == other_obj.int()
+            other_bytes = other.to_bytes(len(self), "big")
+            return bytes(self) == other_bytes
         else:
             other_obj = EthHexBytes(other)
             return bytes(self) == bytes(other_obj)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __add__(self, other) -> 'EthHexBytes':
         if isinstance(other, EthHexBytes):

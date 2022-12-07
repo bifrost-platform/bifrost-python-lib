@@ -1,6 +1,5 @@
-cryptography
-ecdsa
 eth-abi
+eth-keys
 eth-account
 pycryptodome
 requests

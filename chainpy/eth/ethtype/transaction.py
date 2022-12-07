@@ -17,7 +17,7 @@ from chainpy.eth.ethtype.amount import EthAmount
 from chainpy.eth.ethtype.dataclassmeta import EthHashBytesMeta, IntegerMeta, EthHexBytesMeta, EthAddrMeta
 from chainpy.eth.ethtype.exceptions import EthTypeError
 from chainpy.eth.ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
-from chainpy.eth.ethtype.utils import is_hex, ETH_HASH
+from chainpy.eth.ethtype.utils import is_hex
 
 dynamic_unsigned_transaction_fields = (
     ('chainId', big_endian_int),
@@ -176,8 +176,7 @@ class EthTransaction:
     def tx_hash(self) -> EthHashBytes:
         if self.hash is None:
             serialized_tx = self.serialize()
-            hash_raw = ETH_HASH(serialized_tx).digest()
-            return EthHashBytes(hash_raw)
+            return keccak_hash(serialized_tx)
         return self.hash
 
     def is_sendable(self) -> bool:

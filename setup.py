@@ -6,9 +6,8 @@ setup(
     version=__version__,
     package=find_packages,
     install_requires=[
-        "cryptography",
-        "ecdsa",
         "eth-abi",
+        "eth-keys",
         "eth-account",
         "pycryptodome",
         "requests",
