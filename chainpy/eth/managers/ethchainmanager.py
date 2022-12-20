@@ -224,6 +224,7 @@ class EthChainManager(EthContractHandler):
 
     def send_transaction(self,
                          transaction: EthTransaction,
+                         gas_limit: int = None,
                          boost: bool = False,
                          gas_limit_multiplier: float = 1.0) -> EthHashBytes:
         if self.__account is None:
@@ -232,9 +233,10 @@ class EthChainManager(EthContractHandler):
         # estimate tx and setting gas parameter
         is_sendable, tx_with_fee = self.set_gas_limit_and_fee(
             transaction,
-            self.__account,
+            gas_limit=gas_limit,
             boost=boost,
-            gas_limit_multiplier=gas_limit_multiplier
+            gas_limit_multiplier=gas_limit_multiplier,
+            sender_account=self.__account
         )
 
         tx_hash = None
