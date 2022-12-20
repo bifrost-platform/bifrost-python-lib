@@ -105,13 +105,16 @@ class EthRpcClient:
             print("let's try it again!")
             return self.send_request(method, params)
 
-        code = response.status_code
-        if 200 <= code < 400:
-            response_json = response.json()
-        else:
+        try:
+            code = response.status_code
+            if code < 200 or 400 < code:
+                raise Exception("OutOfStatusCode: code({}), msg({})".format(code, response.content))
+            else:
+                response_json = response.json()
+        except Exception as e:
             formatted_log(
                 rpc_logger,
-                log_id="OutOfStatusCode",
+                log_id="RequestError",
                 related_chain=self.__chain_index,
                 log_data=str(response)
             )
