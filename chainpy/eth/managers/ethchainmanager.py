@@ -10,7 +10,7 @@ from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.amount import EthAmount
 from ..ethtype.account import EthAccount
 from ..ethtype.transaction import EthTransaction
-from ..managers.configs import FeeConfig, merge_dict
+from ..managers.utils import FeeConfig, merge_dict
 from ..managers.contracthandler import EthContractHandler
 
 

@@ -2,7 +2,7 @@ import json
 import unittest
 from typing import Optional, List, Dict
 
-from .configs import merge_dict
+from .utils import merge_dict
 from ..ethtype.account import EthAccount
 from ..ethtype.amount import EthAmount
 from ..ethtype.chaindata import EthReceipt

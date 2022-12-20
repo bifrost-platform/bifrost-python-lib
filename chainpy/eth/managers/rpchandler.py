@@ -6,7 +6,7 @@ import requests
 import time
 from typing import List, Optional, Union, Callable
 
-from .configs import merge_dict
+from .utils import merge_dict
 from ..ethtype.amount import EthAmount
 from ..ethtype.consts import ChainIndex
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes

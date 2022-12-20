@@ -2,7 +2,7 @@ import pytest
 
 from chainpy.eth.ethtype.consts import ChainIndex
 from chainpy.eth.ethtype.hexbytes import EthAddress
-from chainpy.eth.managers.configs import EntityRootConfig
+from chainpy.eth.managers.utils import EntityRootConfig
 from chainpy.eth.managers.ethchainmanager import EthChainManager
 
 

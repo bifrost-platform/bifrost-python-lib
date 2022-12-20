@@ -1,7 +1,7 @@
 import unittest
 from typing import List, Optional
 
-from .configs import merge_dict
+from .utils import merge_dict
 from ..ethtype.consts import ChainIndex
 from ..ethtype.contract import EthContract
 from ..ethtype.exceptions import RpcExceedRequestTime
