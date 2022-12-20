@@ -48,6 +48,12 @@ class MultiChainManager:
                 private_config = json.load(f)
         return cls.from_configs(config, private_config)
 
+    def set_account(self, private_key: str):
+        for chain_index in self.supported_chain_list:
+            chain_manager = self.get_chain_manager_of(chain_index)
+            chain_manager.set_account(private_key)
+        self.__active_account = EthAccount.from_secret(private_key)
+
     @property
     def active_account(self) -> EthAccount:
         return self.__active_account
