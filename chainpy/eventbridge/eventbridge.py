@@ -10,10 +10,9 @@ from ..eth.ethtype.consts import ChainIndex
 
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.exceptions import RpcEVMError
-from ..eth.managers.multichainmanager import EntityRootConfig
 from ..logger import Logger, formatted_log
 
-from .utils import timestamp_msec, transaction_commit_time_sec
+from .utils import timestamp_msec
 from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 
@@ -70,11 +69,8 @@ class KeyValueCache:
 
 
 class EventBridge(MultiChainMonitor):
-    def __init__(self, entity_config: EntityRootConfig, cache_value_type: Type = int, max_length: int = 100):
-        super().__init__(entity_config)
-        self.__tx_commit_time_sec = dict()
-        for chain_index in self.supported_chain_list:
-            self.__tx_commit_time_sec[chain_index] = transaction_commit_time_sec(chain_index, entity_config)
+    def __init__(self, multichain_config: dict, cache_value_type: Type = int, max_length: int = 100):
+        super().__init__(multichain_config)
         self.cache = KeyValueCache(cache_value_type, max_length)
 
     def has_key(self, key: int) -> bool:
@@ -118,7 +114,7 @@ class EventBridge(MultiChainMonitor):
         try:
             # build and send transaction
             tx = self.world_build_transaction(dst_chain, contract_name, method_name, params)
-            _, tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
+            tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
 
             formatted_log(
                 consumer_logger,
@@ -141,7 +137,7 @@ class EventBridge(MultiChainMonitor):
                 self.queue.enqueue(event)
             else:
                 """ set receipt params to the event """
-                receipt_time_lock = timestamp_msec() + self.__tx_commit_time_sec[dst_chain] * 1000
+                receipt_time_lock = timestamp_msec() + self.get_chain_manager_of(dst_chain).tx_commit_time_sec * 1000
                 event.switch_to_check_receipt(dst_chain, tx_hash, receipt_time_lock)
                 self.queue.enqueue(event)
 

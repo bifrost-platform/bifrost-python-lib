@@ -1,3 +1,4 @@
+import json
 import logging
 import unittest
 
@@ -5,7 +6,7 @@ import requests
 import time
 from typing import List, Optional, Union, Callable
 
-from .configs import EntityRootConfig
+from .utils import merge_dict
 from ..ethtype.amount import EthAmount
 from ..ethtype.consts import ChainIndex
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
@@ -14,9 +15,15 @@ from ..ethtype.exceptions import *
 from ..ethtype.transaction import EthTransaction
 from ...logger import Logger, formatted_log
 
+
 rpc_logger = Logger("RPC-Client", logging.INFO)
-SLEEP_TIME_IN_SECS = 180
-MAX_RETRY_NUM = 20
+RPC_RETRY_MAX_RETRY_NUM = 20
+RPC_RETRY_SLEEP_TIME_IN_SECS = 180
+DEFAULT_RECEIPT_MAX_RETRY: int = 10
+DEFAULT_BLOCK_PERIOD_SECS: int = 3
+DEFAULT_BLOCK_AGING_BLOCKS: int = 1
+DEFAULT_RPC_DOWN_ALLOW_SECS: int = 180
+DEFAULT_RPC_COMMIT_TIME_MULTIPLIER: int = 2
 
 
 def _reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
@@ -36,58 +43,84 @@ def _hex_height_or_latest(height: Union[int, str] = "latest") -> str:
 
 
 class EthRpcClient:
-    ANALYZER_RELAYER = False
-    CALL_NUM = {
-        ChainIndex.BIFROST: 0,
-        ChainIndex.ETHEREUM: 0,
-        ChainIndex.BINANCE: 0,
-        ChainIndex.POLYGON: 0,
-        ChainIndex.KLAYTN: 0
-    }
-    TIME_CACHE = 0
-    PRINT_PERIOD_SEC = 5
+    """ Client class for Ethereum JSON RPC.
 
-    # TODO research
-    #  eth_newFilter, eth_getFilterChanges, eth_newBlockFilter(notify when a new block arrives)
-    def __init__(self, chain_index: ChainIndex, root_config: EntityRootConfig):
-        chain_config = root_config.get_chain_config(chain_index)
-        self.__chain_index = chain_index
-        self.__url_with_access_key = chain_config.url_with_access_key
-        self.__receipt_max_try = chain_config.receipt_max_try
-        self.__block_period_sec = chain_config.block_period_sec
-        self.__block_aging_period = chain_config.block_aging_period
-
-        self.__rpc_server_downtime_allow_sec = chain_config.rpc_server_downtime_allow_sec
-
+    The following methods have not yet been implemented
+    - eth_newFilter
+    - eth_getFilterChanges
+    - eth_newBlockFilter
+    - eth_getStorageAt
+    - eth_getCode
+    """
+    def __init__(
+            self,
+            url_with_access_key: str,
+            chain_index: ChainIndex = ChainIndex.NONE,
+            receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
+            block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
+            block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
+            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
+            transaction_commit_multiplier: int = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER
+    ):
+        self._chain_index = chain_index
+        self.__url_with_access_key = url_with_access_key
+        self.__receipt_max_try = DEFAULT_RECEIPT_MAX_RETRY if receipt_max_try is None else receipt_max_try
+        self.__block_period_sec = DEFAULT_BLOCK_PERIOD_SECS if block_period_sec is None else block_period_sec
+        self.__block_aging_period = DEFAULT_BLOCK_AGING_BLOCKS if block_aging_period is None else block_aging_period
+        self.__rpc_server_downtime_allow_sec = DEFAULT_RPC_DOWN_ALLOW_SECS \
+            if rpc_server_downtime_allow_sec is None else rpc_server_downtime_allow_sec
+        self.__transaction_commit_multiplier = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER \
+            if transaction_commit_multiplier is None else transaction_commit_multiplier
         # check connection
         resp = self.send_request("eth_chainId", [])
         self.__chain_id = int(resp, 16)
 
     @classmethod
-    def from_config_file(cls,
-                         chain_index: ChainIndex,
-                         public_config: str,
-                         private_config: str = None,
-                         project_root: str = "./"):
-        root_config = EntityRootConfig.from_config_files(public_config, private_config, project_root)
-        return cls(chain_index, root_config)
+    def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: ChainIndex = None):
+        merged_config = merge_dict(config, private_config)
+
+        if merged_config.get("chain_name") is None and chain_index is None:
+            # multichain config and no chain index
+            raise Exception("should be inserted chain config")
+
+        if chain_index is None:
+            # in case of being inserted a chain config without chain index
+            chain_index = ChainIndex[merged_config["chain_name"].upper()]
+
+        if merged_config.get("chain_name") is None:
+            merged_config = merged_config[chain_index.name.lower()]
+
+        return cls(
+            merged_config["url_with_access_key"],
+            chain_index,
+            merged_config.get("receipt_max_try"),
+            merged_config.get("block_period_sec"),
+            merged_config.get("block_aging_period"),
+            merged_config.get("rpc_server_downtime_allow_sec")
+        )
 
     @classmethod
-    def from_config_dict(cls,
-                         chain_index: ChainIndex,
-                         public_config: dict,
-                         private_config: dict = None,
-                         project_root: str = "./"):
-        root_config = EntityRootConfig.from_dict(public_config, private_config, project_root)
-        return cls(chain_index, root_config)
+    def from_config_files(cls, config_file: str, private_config_file: str = None, chain_index: ChainIndex = ChainIndex.NONE):
+        with open(config_file, "r") as f:
+            config = json.load(f)
+        if private_config_file is None:
+            private_config = None
+        else:
+            with open(private_config_file, "r") as f:
+                private_config = json.load(f)
+        return cls.from_config_dict(config, private_config, chain_index)
 
     @property
     def url(self) -> str:
         return self.__url_with_access_key
 
+    @property
+    def tx_commit_time_sec(self) -> int:
+        return self.__block_aging_period * self.__transaction_commit_multiplier
+
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
-        if cnt > MAX_RETRY_NUM:
-            raise Exception("Exceeded max re-try cnt on {}".format(self.__chain_index))
+        if cnt > RPC_RETRY_MAX_RETRY_NUM:
+            raise Exception("Exceeded max re-try cnt on {}".format(self._chain_index))
 
         body = {
             "jsonrpc": "2.0",
@@ -99,7 +132,7 @@ class EthRpcClient:
         try:
             response = requests.post(self.url, json=body, headers=headers)
         except Exception as e:
-            formatted_log(rpc_logger, log_id="RPCException", related_chain=self.__chain_index, log_data=str(e))
+            formatted_log(rpc_logger, log_id="RPCException", related_chain=self._chain_index, log_data=str(e))
             print("request will be re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec))
             time.sleep(self.__rpc_server_downtime_allow_sec)
             print("let's try it again!")
@@ -115,10 +148,10 @@ class EthRpcClient:
             formatted_log(
                 rpc_logger,
                 log_id="RequestError",
-                related_chain=self.__chain_index,
+                related_chain=self._chain_index,
                 log_data=str(response)
             )
-            time.sleep(SLEEP_TIME_IN_SECS)
+            time.sleep(RPC_RETRY_SLEEP_TIME_IN_SECS)
             return self.send_request(method, params, cnt + 1)
 
         if "result" in response_json.keys():
@@ -129,7 +162,7 @@ class EthRpcClient:
     @property
     def chain_index(self) -> ChainIndex:
         """ return chain index specified from the configuration. """
-        return self.__chain_index
+        return self._chain_index
 
     @property
     def chain_id(self) -> int:
@@ -322,24 +355,14 @@ class EthRpcClient:
         resp = self.send_request("eth_sendRawTransaction", [signed_serialized_tx.hex()])
         return EthHashBytes(resp)
 
-    def eth_get_storage_at(self):
-        # TODO impl, but low priority
-        pass
-
-    def eth_get_code(self, addr: EthAddress):
-        # TODO impl, but low priority
-        pass
-
 
 class TestTransaction(unittest.TestCase):
     def setUp(self) -> None:
-        project_root_path = "../"
-        config = EntityRootConfig.from_config_files(
+        self.cli = EthRpcClient.from_config_files(
             "configs/entity.relayer.json",
             "configs/entity.relayer.private.json",
-            project_root_path
+            chain_index=ChainIndex.BIFROST
         )
-        self.cli = EthRpcClient(ChainIndex.BIFROST, config)
         self.target_tx_hash = EthHashBytes(0xfb6ceb412ae267643d45b28516565b1ab07f4d16ade200d7e432be892add1448)
         self.serialized_tx = "0xf90153f9015082bfc082301f0186015d3ef7980183036e54947abd332cf88ca31725fffb21795f90583744535280b901246196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874ec0"
 

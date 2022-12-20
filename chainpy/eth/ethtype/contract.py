@@ -153,7 +153,7 @@ class Abi:
 class EthContract:
     def __init__(self, contract_name: str, contract_address: EthAddress, abi_obj: Abi):
         self.__contract_name = contract_name
-        self.__contract_address = contract_address
+        self.__contract_address = EthAddress(contract_address)
         self.__abi = abi_obj
         self.__user_account = None
 
