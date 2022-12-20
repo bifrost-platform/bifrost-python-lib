@@ -44,6 +44,13 @@ class EthEventHandler(EthRpcClient):
             topic = contract.get_method_abi(event_name).get_topic()
             self.__event_name_by_topic[topic.hex()] = event_name
 
+    def get_event_names(self) -> List[str]:
+        return list(self.__contract_by_event_name.keys())
+
+    @property
+    def max_log_num(self) -> int:
+        return self.__max_log_num
+
     def _get_emitter_addresses(self) -> list:
         addresses = list()
         for event_name, contract in self.__contract_by_event_name.items():
@@ -64,7 +71,7 @@ class EthEventHandler(EthRpcClient):
         contract_obj = self.__contract_by_event_name[event_name]
         return contract_obj.contract_name
 
-    def _collect_target_event_in_range(self, event_name: str, from_block: int, to_block: int) -> List[DetectedEvent]:
+    def small_ranged_collect_events(self, event_name: str, from_block: int, to_block: int) -> List[DetectedEvent]:
         if to_block < from_block:
             return list()
 
@@ -79,8 +86,8 @@ class EthEventHandler(EthRpcClient):
         except RpcExceedRequestTime:
             self.__max_log_num = self.__max_log_num // 2
             delta_half = (to_block - from_block) // 2
-            detected_events = self._collect_target_event_in_range(event_name, from_block, from_block + delta_half)
-            detected_events += self._collect_target_event_in_range(event_name, from_block + delta_half + 1, to_block)
+            detected_events = self.small_ranged_collect_events(event_name, from_block, from_block + delta_half)
+            detected_events += self.small_ranged_collect_events(event_name, from_block + delta_half + 1, to_block)
             return detected_events
 
         historical_logs = list()
@@ -97,12 +104,14 @@ class EthEventHandler(EthRpcClient):
             detected_event = DetectedEvent(self.chain_index, contract_name, event_name, raw_log)
             historical_logs.append(detected_event)
 
+        self.latest_height = to_block + 1
+
         return historical_logs
 
-    def collect_target_event_in_range(self,
-                                      event_name: str,
-                                      from_block: int,
-                                      to_block: int = None) -> List[DetectedEvent]:
+    def ranged_collect_events(self,
+                              event_name: str,
+                              from_block: int,
+                              to_block: int = None) -> List[DetectedEvent]:
         """  collect the event in specific range (at the single blockchain) """
         to_block = self.eth_get_matured_block_number() if to_block is None else to_block
 
@@ -118,7 +127,7 @@ class EthEventHandler(EthRpcClient):
         prev_height = from_block
         for i in range(loop_num):
             next_height = min(prev_height + self.__max_log_num, to_block)
-            historical_logs += self._collect_target_event_in_range(event_name, prev_height, next_height)
+            historical_logs += self.small_ranged_collect_events(event_name, prev_height, next_height)
             if next_height == to_block:
                 break
             prev_height = next_height + 1
@@ -133,12 +142,11 @@ class EthEventHandler(EthRpcClient):
 
         historical_events = list()
         for event_name in self.__contract_by_event_name.keys():
-            historical_events += self.collect_target_event_in_range(
+            historical_events += self.ranged_collect_events(
                 event_name,
                 previous_matured_max_height,
                 current_matured_max_height
             )
-        self.latest_height = current_matured_max_height + 1
 
         return historical_events
 
