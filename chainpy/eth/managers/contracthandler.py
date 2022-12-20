@@ -29,7 +29,6 @@ class EthContractHandler(EthRpcClient):
             latest_height: int = 0,
             max_log_num: int = 1000
     ):
-
         super().__init__(
             url_with_access_key,
             chain_index,
@@ -41,7 +40,7 @@ class EthContractHandler(EthRpcClient):
         )
 
         self._matured_latest_height = latest_height if latest_height is None else 0
-        self.__max_log_num = max_log_num if max_log_num is None else 1000
+        self.__max_log_num =  1000 if max_log_num is None else max_log_num
 
         self._contracts = dict()
         self._contract_name_by_event_name = dict()

@@ -77,6 +77,7 @@ class EthChainManager(EthContractHandler):
             merged_config.get("block_period_sec"),
             merged_config.get("block_aging_period"),
             merged_config.get("rpc_server_downtime_allow_sec"),
+            merged_config.get("transaction_commit_multiplier"),
 
             merged_config.get("events"),
             merged_config.get("bootstrap_latest_height"),
