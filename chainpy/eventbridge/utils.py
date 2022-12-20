@@ -4,7 +4,7 @@ import time
 from typing import List, Tuple, Dict, Optional
 
 from ..eth.managers.configs import EntityRootConfig
-from ..eth.managers.eventhandler import DetectedEvent
+from ..eth.managers.contracthandler import DetectedEvent
 from ..eth.ethtype.chaindata import EthLog
 from ..eth.ethtype.consts import ChainIndex
 from ..utils import ensure_path_endswith_slash_char

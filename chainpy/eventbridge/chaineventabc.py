@@ -2,7 +2,7 @@ from abc import *
 from enum import Enum
 from typing import Tuple, Optional, List, Dict, Union, TYPE_CHECKING
 
-from ..eth.managers.eventhandler import DetectedEvent
+from ..eth.managers.contracthandler import DetectedEvent
 from ..eth.ethtype.consts import ChainIndex
 from ..eth.ethtype.hexbytes import EthHashBytes
 

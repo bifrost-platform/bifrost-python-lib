@@ -121,6 +121,8 @@ class MultiChainConfig:
 
 
 def merge_dict(base_dict: dict, add_dict: dict):
+    if add_dict is None:
+        return base_dict
     if not isinstance(add_dict, dict):
         return add_dict
 
