@@ -114,7 +114,7 @@ class EventBridge(MultiChainMonitor):
         try:
             # build and send transaction
             tx = self.world_build_transaction(dst_chain, contract_name, method_name, params)
-            _, tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
+            tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
 
             formatted_log(
                 consumer_logger,

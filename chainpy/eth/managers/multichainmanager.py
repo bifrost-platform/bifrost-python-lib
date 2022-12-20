@@ -81,7 +81,7 @@ class MultiChainManager:
     def world_send_transaction(self,
                                chain_index: ChainIndex,
                                tx_with_fee: EthTransaction,
-                               gas_limit_multiplier: float = 1.0) -> (EthTransaction, EthHashBytes):
+                               gas_limit_multiplier: float = 1.0) -> EthHashBytes:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.send_transaction(tx_with_fee, gas_limit_multiplier=gas_limit_multiplier)
 
