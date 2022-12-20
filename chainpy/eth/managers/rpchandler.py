@@ -14,9 +14,14 @@ from ..ethtype.exceptions import *
 from ..ethtype.transaction import EthTransaction
 from ...logger import Logger, formatted_log
 
+
 rpc_logger = Logger("RPC-Client", logging.INFO)
-SLEEP_TIME_IN_SECS = 180
-MAX_RETRY_NUM = 20
+RPC_RETRY_MAX_RETRY_NUM = 20
+RPC_RETRY_SLEEP_TIME_IN_SECS = 180
+DEFAULT_RECEIPT_MAX_RETRY: int = 10
+DEFAULT_BLOCK_PERIOD_SECS: int = 3
+DEFAULT_BLOCK_AGING_BLOCKS: int = 1
+DEFAULT_RPC_DOWN_ALLOW_SECS: int = 180
 
 
 def _reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
@@ -36,41 +41,56 @@ def _hex_height_or_latest(height: Union[int, str] = "latest") -> str:
 
 
 class EthRpcClient:
-    ANALYZER_RELAYER = False
-    CALL_NUM = {
-        ChainIndex.BIFROST: 0,
-        ChainIndex.ETHEREUM: 0,
-        ChainIndex.BINANCE: 0,
-        ChainIndex.POLYGON: 0,
-        ChainIndex.KLAYTN: 0
-    }
-    TIME_CACHE = 0
-    PRINT_PERIOD_SEC = 5
+    """ Client class for Ethereum JSON RPC.
 
-    # TODO research
-    #  eth_newFilter, eth_getFilterChanges, eth_newBlockFilter(notify when a new block arrives)
-    def __init__(self, chain_index: ChainIndex, root_config: EntityRootConfig):
-        chain_config = root_config.get_chain_config(chain_index)
+    The following methods have not yet been implemented
+    - eth_newFilter
+    - eth_getFilterChanges
+    - eth_newBlockFilter
+    - eth_getStorageAt
+    - eth_getCode
+    """
+    def __init__(
+            self,
+            url_with_access_key: str,
+            chain_index: ChainIndex = ChainIndex.NONE,
+            receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
+            block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
+            block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
+            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS):
         self.__chain_index = chain_index
-        self.__url_with_access_key = chain_config.url_with_access_key
-        self.__receipt_max_try = chain_config.receipt_max_try
-        self.__block_period_sec = chain_config.block_period_sec
-        self.__block_aging_period = chain_config.block_aging_period
+        self.__url_with_access_key = url_with_access_key
+        self.__receipt_max_try = receipt_max_try
+        self.__block_period_sec = block_period_sec
+        self.__block_aging_period = block_aging_period
 
-        self.__rpc_server_downtime_allow_sec = chain_config.rpc_server_downtime_allow_sec
+        self.__rpc_server_downtime_allow_sec = rpc_server_downtime_allow_sec
 
         # check connection
         resp = self.send_request("eth_chainId", [])
         self.__chain_id = int(resp, 16)
 
     @classmethod
-    def from_config_file(cls,
-                         chain_index: ChainIndex,
-                         public_config: str,
-                         private_config: str = None,
-                         project_root: str = "./"):
+    def from_root_config(cls, chain_index: ChainIndex, entity_root_config: EntityRootConfig):
+        chain_config = entity_root_config.get_chain_config(chain_index)
+
+        return cls(
+            chain_config.url_with_access_key,
+            chain_index,
+            chain_config.receipt_max_try,
+            chain_config.block_period_sec,
+            chain_config.block_aging_period,
+            chain_config.rpc_server_downtime_allow_sec
+        )
+
+    @classmethod
+    def from_root_config_file(cls,
+                              chain_index: ChainIndex,
+                              public_config: str,
+                              private_config: str = None,
+                              project_root: str = "./"):
         root_config = EntityRootConfig.from_config_files(public_config, private_config, project_root)
-        return cls(chain_index, root_config)
+        return cls.from_root_config(chain_index, root_config)
 
     @classmethod
     def from_config_dict(cls,
@@ -79,14 +99,14 @@ class EthRpcClient:
                          private_config: dict = None,
                          project_root: str = "./"):
         root_config = EntityRootConfig.from_dict(public_config, private_config, project_root)
-        return cls(chain_index, root_config)
+        return cls.from_root_config(chain_index, root_config)
 
     @property
     def url(self) -> str:
         return self.__url_with_access_key
 
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
-        if cnt > MAX_RETRY_NUM:
+        if cnt > RPC_RETRY_MAX_RETRY_NUM:
             raise Exception("Exceeded max re-try cnt on {}".format(self.__chain_index))
 
         body = {
@@ -118,7 +138,7 @@ class EthRpcClient:
                 related_chain=self.__chain_index,
                 log_data=str(response)
             )
-            time.sleep(SLEEP_TIME_IN_SECS)
+            time.sleep(RPC_RETRY_SLEEP_TIME_IN_SECS)
             return self.send_request(method, params, cnt + 1)
 
         if "result" in response_json.keys():
@@ -322,14 +342,6 @@ class EthRpcClient:
         resp = self.send_request("eth_sendRawTransaction", [signed_serialized_tx.hex()])
         return EthHashBytes(resp)
 
-    def eth_get_storage_at(self):
-        # TODO impl, but low priority
-        pass
-
-    def eth_get_code(self, addr: EthAddress):
-        # TODO impl, but low priority
-        pass
-
 
 class TestTransaction(unittest.TestCase):
     def setUp(self) -> None:
@@ -339,7 +351,7 @@ class TestTransaction(unittest.TestCase):
             "configs/entity.relayer.private.json",
             project_root_path
         )
-        self.cli = EthRpcClient(ChainIndex.BIFROST, config)
+        self.cli = EthRpcClient.from_root_config(ChainIndex.BIFROST, config)
         self.target_tx_hash = EthHashBytes(0xfb6ceb412ae267643d45b28516565b1ab07f4d16ade200d7e432be892add1448)
         self.serialized_tx = "0xf90153f9015082bfc082301f0186015d3ef7980183036e54947abd332cf88ca31725fffb21795f90583744535280b901246196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874ec0"
 
