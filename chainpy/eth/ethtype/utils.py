@@ -1,13 +1,24 @@
-import binascii
 import unittest
+import binascii
+from typing import Union, Any, TYPE_CHECKING
 from string import hexdigits, digits
-from Crypto.Hash import keccak
-from typing import Union, Any
+
+from eth_utils import keccak
+
 from .exceptions import EthTypeError, EthValueError
+
+if TYPE_CHECKING:
+    from .hexbytes import EthHashBytes, EthHexBytes
 
 ETH_EMPTY_BYTES = b""
 ETH_EMPTY_STRING = ""
-ETH_HASH = lambda pre_hash: keccak.new(data=pre_hash, digest_bits=256)
+
+
+def keccak_hash(pre_image: Union["EthHexBytes", bytes]) -> "EthHashBytes":
+    from .hexbytes import EthHexBytes, EthHashBytes
+    if isinstance(pre_image, EthHexBytes):
+        pre_image = pre_image.bytes()
+    return EthHashBytes(keccak(pre_image))
 
 
 def hex_str_to_bytes(hex_str: str) -> bytes:
@@ -148,26 +159,27 @@ def float_to_wei(amount: float, decimal: int):
 
 def checksum_encode(address: str) -> str:
     # encoding address to bytes
-    norm_addr = address.replace("0x", "").lower()
-    addr_bytes = norm_addr.encode("utf-8")
-    address_hash = ETH_HASH(addr_bytes).hexdigest()
+    lower_address_without_prefix = address.replace("0x", "").lower()
+    addr_bytes = lower_address_without_prefix.encode("utf-8")
+    address_hash = keccak_hash(addr_bytes).hex_without_0x()
 
     checksum_address = "0x"
     for i in range(40):
         if int(address_hash[i], 16) > 7:
-            checksum_address += norm_addr[i].upper()
+            checksum_address += lower_address_without_prefix[i].upper()
         else:
-            checksum_address += norm_addr[i]
+            checksum_address += lower_address_without_prefix[i]
     return checksum_address
 
 
 def is_checksum_address(address: str) -> bool:
-    address = address.replace('0x', '')
-    addr_hash = ETH_HASH(address.lower()).hexdigest()
+    lower_address_without_prefix = address.replace("0x", "").lower()
+    addr_bytes = lower_address_without_prefix.encode("utf-8")
+    addr_hash = keccak_hash(addr_bytes).hex_without_0x()
     for i in range(40):
-        if int(addr_hash[i], 16) > 7 and address[i].upper() != address[i]:
+        if int(addr_hash[i], 16) > 7 and lower_address_without_prefix[i].upper() != lower_address_without_prefix[i]:
             return False
-        if int(addr_hash[i], 16) <= 7 and address[i].lower() != address[i]:
+        if int(addr_hash[i], 16) <= 7 and lower_address_without_prefix[i].lower() != lower_address_without_prefix[i]:
             return False
     return True
 
@@ -231,8 +243,8 @@ class TestFloatFunc(unittest.TestCase):
 
     def test_hash(self):
         pre_hash = b"test"
-        result = ETH_HASH(pre_hash).hexdigest()
-        print(result)
+        result = keccak_hash(pre_hash)
+        self.assertEqual(result, 0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658)
 
     def test_address_checksum(self):
         address_with_checksum = "0x26590C501c0bAeFB72FFfF51E12b3423e2a5D07f"

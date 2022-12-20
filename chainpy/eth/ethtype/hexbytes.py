@@ -25,7 +25,7 @@ class EthHexBytes(bytes):
         return cast(EthHexBytes, super().__new__(cls, data))
 
     def __repr__(self) -> str:
-        return "{}({})".format(self.__class__.__name__, "0x" + self.hex())
+        return "{}({})".format(self.__class__.__name__, self.hex())
 
     def __str__(self) -> str:
         return self.hex()
@@ -34,11 +34,14 @@ class EthHexBytes(bytes):
         if isinstance(other, EthHexBytes):
             return bytes(self) == bytes(other)
         elif isinstance(other, int):
-            other_obj = EthHexBytes(other)
-            return self.int() == other_obj.int()
+            other_bytes = other.to_bytes(len(self), "big")
+            return bytes(self) == other_bytes
         else:
             other_obj = EthHexBytes(other)
             return bytes(self) == bytes(other_obj)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __add__(self, other) -> 'EthHexBytes':
         if isinstance(other, EthHexBytes):
@@ -71,7 +74,8 @@ class EthHexBytes(bytes):
 
     @staticmethod
     def default():
-        return EthHexBytes(b"", 32)
+        """ return zero length bytes string """
+        return EthHexBytes(b"")
 
 
 class EthHashBytes(EthHexBytes):
@@ -91,7 +95,8 @@ class EthAddress(EthHexBytes):
         return checksum_encode(self.hex())
 
     @staticmethod
-    def default():
+    def zero():
+        """ return zero address """
         return EthAddress("0x0000000000000000000000000000000000000000")
 
 
@@ -146,3 +151,9 @@ class EthHexBytesTest(unittest.TestCase):
         self.assertEqual(data, "0x466D25b791FD4882e15aF01FC28a633014104B2b")
         self.assertRaises(Exception, data.hex() == "0x466D25b791FD4882e15aF01FC28a633014104B2b")
         self.assertEqual(data.with_checksum(), "0x466D25b791FD4882e15aF01FC28a633014104B2b")
+
+    def test_zero(self):
+        self.assertEqual(EthHexBytes.default(), b"")
+        self.assertEqual(EthHashBytes.default(), b"")
+        self.assertEqual(EthAddress.default(), b"")
+        self.assertEqual(EthAddress.zero(), "0x0000000000000000000000000000000000000000")

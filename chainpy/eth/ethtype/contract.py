@@ -89,7 +89,7 @@ class AbiMethod:
 
     def get_topic(self) -> EthHashBytes:
         pre_image = self.get_signature()
-        topic_bytes = ETH_HASH(pre_image.encode()).digest()
+        topic_bytes = keccak_hash(pre_image.encode())
         return EthHashBytes(topic_bytes)
 
     def decode_input_data(self, encoded_data: EthHexBytes):

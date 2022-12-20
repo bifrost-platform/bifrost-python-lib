@@ -212,7 +212,7 @@ class EntityRootConfig:
             if base_path is not None:
                 base_path = ensure_path_endswith_slash_char(chain_config_dict["abi_base_path"])
             else:
-                base_path = "/"
+                base_path = "./"
 
             contracts = chain_config_dict.get("contracts")
             if contracts is not None:

@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
+from chainpy.__init__ import __version__
 
 setup(
-    name="bifrost-python-lib",
-    version="v0.2.0",
+    name="chainpy",
+    version=__version__,
     package=find_packages,
     install_requires=[
-        "cryptography",
-        "ecdsa",
         "eth-abi",
+        "eth-keys",
         "eth-account",
         "pycryptodome",
         "requests",
