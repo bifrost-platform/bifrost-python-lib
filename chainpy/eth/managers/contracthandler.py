@@ -132,7 +132,7 @@ class EthContractHandler(EthRpcClient):
         if to_block < from_block:
             return list()
 
-        emitter = self._contract_name_by_event_name.get(event_name)
+        emitter = self.get_contract_by_event_name(event_name)
         if emitter is None:
             return list()
         emitter_addr = emitter.address
