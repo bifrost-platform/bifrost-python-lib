@@ -6,7 +6,6 @@ import time
 from chainpy.eventbridge.chaineventabc import ChainEventABC
 from chainpy.eventbridge.periodiceventabc import PeriodicEventABC
 from chainpy.eventbridge.utils import timestamp_msec
-from chainpy.eth.managers.configs import EntityRootConfig
 from chainpy.eth.managers.multichainmanager import MultiChainManager
 from chainpy.logger import Logger, formatted_log
 
@@ -74,8 +73,8 @@ class TimePriorityQueue:
 
 
 class MultiChainMonitor(MultiChainManager):
-    def __init__(self, entity_config: EntityRootConfig):
-        super().__init__(entity_config)
+    def __init__(self, multichain_config: dict):
+        super().__init__(multichain_config)
         self.__queue = TimePriorityQueue()
         self.__events_types = dict()  # event_name to event_type
         self.__offchain_source_types = dict()
@@ -139,4 +138,4 @@ class MultiChainMonitor(MultiChainManager):
                     related_chain=chain_event.on_chain,
                     log_data="Detected"
                 )
-            time.sleep(self.multichain_config.chain_monitor_period_sec)
+            time.sleep(self.multichain_config["chain_monitor_period_sec"])

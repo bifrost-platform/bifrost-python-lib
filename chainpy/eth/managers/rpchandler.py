@@ -23,6 +23,7 @@ DEFAULT_RECEIPT_MAX_RETRY: int = 10
 DEFAULT_BLOCK_PERIOD_SECS: int = 3
 DEFAULT_BLOCK_AGING_BLOCKS: int = 1
 DEFAULT_RPC_DOWN_ALLOW_SECS: int = 180
+DEFAULT_RPC_COMMIT_TIME_MULTIPLIER: int = 2
 
 
 def _reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
@@ -58,15 +59,18 @@ class EthRpcClient:
             receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
-            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS):
+            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
+            transaction_commit_multiplier: int = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER
+    ):
         self._chain_index = chain_index
         self.__url_with_access_key = url_with_access_key
         self.__receipt_max_try = DEFAULT_RECEIPT_MAX_RETRY if receipt_max_try is None else receipt_max_try
         self.__block_period_sec = DEFAULT_BLOCK_PERIOD_SECS if block_period_sec is None else block_period_sec
         self.__block_aging_period = DEFAULT_BLOCK_AGING_BLOCKS if block_aging_period is None else block_aging_period
-        self.__rpc_server_downtime_allow_sec = DEFAULT_RPC_DOWN_ALLOW_SECS if rpc_server_downtime_allow_sec is None \
-            else rpc_server_downtime_allow_sec
-
+        self.__rpc_server_downtime_allow_sec = DEFAULT_RPC_DOWN_ALLOW_SECS \
+            if rpc_server_downtime_allow_sec is None else rpc_server_downtime_allow_sec
+        self.__transaction_commit_multiplier = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER \
+            if transaction_commit_multiplier is None else transaction_commit_multiplier
         # check connection
         resp = self.send_request("eth_chainId", [])
         self.__chain_id = int(resp, 16)
@@ -105,6 +109,10 @@ class EthRpcClient:
     @property
     def url(self) -> str:
         return self.__url_with_access_key
+
+    @property
+    def tx_commit_time_sec(self) -> int:
+        return self.__block_aging_period * self.__transaction_commit_multiplier
 
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
         if cnt > RPC_RETRY_MAX_RETRY_NUM:

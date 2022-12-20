@@ -3,7 +3,6 @@ import os
 import time
 from typing import List, Tuple, Dict, Optional
 
-from ..eth.managers.configs import EntityRootConfig
 from ..eth.managers.contracthandler import DetectedEvent
 from ..eth.ethtype.chaindata import EthLog
 from ..eth.ethtype.consts import ChainIndex
@@ -94,9 +93,3 @@ def write_events_to_file(
         # export new file
         with open(cache_dir_path + file_name, "w") as f:
             json.dump({"event": str(events_to_write)}, f)
-
-
-def transaction_commit_time_sec(chain_index: ChainIndex, root_config: EntityRootConfig) -> int:
-    chain_config = root_config.get_chain_config(chain_index)
-    block_aging_time_sec = chain_config.block_aging_period * chain_config.block_period_sec
-    return block_aging_time_sec * chain_config.transaction_commit_multiplier
