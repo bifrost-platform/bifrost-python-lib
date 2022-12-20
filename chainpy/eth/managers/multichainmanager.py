@@ -26,7 +26,7 @@ class MultiChainManager:
         self.__chain_managers = dict()
         for chain_index in self.__supported_chains:
             chain_config = multichain_config[chain_index.name.lower()]
-            chain_manager = EthChainManager.from_config_dict(chain_config)
+            chain_manager = EthChainManager.from_config_dict(chain_config, chain_index=chain_index)
             chain_manager.set_account(private_key)
             self.__chain_managers[chain_index] = chain_manager
 

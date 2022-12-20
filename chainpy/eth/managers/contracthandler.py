@@ -64,9 +64,18 @@ class EthContractHandler(EthRpcClient):
                 self._event_name_by_topic[topic.hex()] = event_name
 
     @classmethod
-    def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: ChainIndex = ChainIndex.NONE):
+    def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: ChainIndex = None):
         merged_config = merge_dict(config, private_config)
-        if chain_index != ChainIndex.NONE:
+
+        if merged_config.get("chain_name") is None and chain_index is None:
+            # multichain config and no chain index
+            raise Exception("should be inserted chain config")
+
+        if chain_index is None:
+            # in case of being inserted a chain config without chain index
+            chain_index = ChainIndex[merged_config["chain_name"].upper()]
+
+        if merged_config.get("chain_name") is None:
             merged_config = merged_config[chain_index.name.lower()]
         return cls(
             merged_config["url_with_access_key"],
@@ -104,13 +113,12 @@ class EthContractHandler(EthRpcClient):
                 return contract
         return None
 
-    def get_contract_name_by_event_name(self, event_name: str) -> str:
-        contract_obj = self._contract_name_by_event_name[event_name]
-        return contract_obj.contract_name
-
     def get_contract_by_event_name(self, event_name: str) -> Optional[EthContract]:
         contract_name = self._contract_name_by_event_name.get(event_name)
         return self.get_contract_by_name(contract_name)
+
+    def get_contract_name_by_event_name(self, event_name: str) -> str:
+        return self._contract_name_by_event_name[event_name]
 
     def get_event_names(self) -> List[str]:
         return list(self._contract_name_by_event_name.keys())

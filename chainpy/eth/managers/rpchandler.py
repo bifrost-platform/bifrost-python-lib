@@ -76,16 +76,20 @@ class EthRpcClient:
         self.__chain_id = int(resp, 16)
 
     @classmethod
-    def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: ChainIndex = ChainIndex.NONE):
+    def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: ChainIndex = None):
         merged_config = merge_dict(config, private_config)
-        if chain_index == ChainIndex.NONE:
-            # in case of being inserted a chain config
-            chain_index = ChainIndex[merged_config["chain_name"]]
-        else:
-            # in case of being inserted a multichain config
-            if chain_index is None:
-                raise Exception("None chain index")
+
+        if merged_config.get("chain_name") is None and chain_index is None:
+            # multichain config and no chain index
+            raise Exception("should be inserted chain config")
+
+        if chain_index is None:
+            # in case of being inserted a chain config without chain index
+            chain_index = ChainIndex[merged_config["chain_name"].upper()]
+
+        if merged_config.get("chain_name") is None:
             merged_config = merged_config[chain_index.name.lower()]
+
         return cls(
             merged_config["url_with_access_key"],
             chain_index,
