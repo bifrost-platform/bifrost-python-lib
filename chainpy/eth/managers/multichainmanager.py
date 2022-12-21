@@ -18,7 +18,7 @@ class MultiChainManager:
     def __init__(self, multichain_config: dict):
         entity_config = multichain_config["entity"]
         private_key = entity_config.get("secret_hex")
-        if private_key is not None:
+        if private_key is not None and private_key != "":
             self.__active_account = EthAccount.from_secret(private_key)
         self.__supported_chains = [ChainIndex[chain_name] for chain_name in entity_config["supporting_chains"]]
 
@@ -27,7 +27,8 @@ class MultiChainManager:
         for chain_index in self.__supported_chains:
             chain_config = multichain_config[chain_index.name.lower()]
             chain_manager = EthChainManager.from_config_dict(chain_config, chain_index=chain_index)
-            chain_manager.set_account(private_key)
+            if private_key is not None and private_key != "":
+                chain_manager.set_account(private_key)
             self.__chain_managers[chain_index] = chain_manager
 
         self.__multichain_config = multichain_config["multichain_config"]

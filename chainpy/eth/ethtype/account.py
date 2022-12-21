@@ -133,6 +133,9 @@ class EthAccount:
 
     @classmethod
     def from_secret(cls, secret: Union[bytearray, bytes, int, str]):
+        secret_bytes = EthHexBytes(secret, 32)
+        if secret_bytes == 0:
+            raise Exception("Zero private key")
         private_key_obj = NATIVE_KEY_API.PrivateKey(EthHexBytes(secret, 32).bytes())
         return cls(private_key_obj)
 
