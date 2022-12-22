@@ -11,6 +11,7 @@ setup(
         "eth-account",
         "pycryptodome",
         "requests",
-        "dataclasses-json"
+        "dataclasses-json",
+        "prometheus-client"
     ]
 )

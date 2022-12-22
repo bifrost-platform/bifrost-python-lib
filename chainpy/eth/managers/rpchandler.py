@@ -14,7 +14,7 @@ from ..ethtype.chaindata import EthBlock, EthReceipt, EthLog
 from ..ethtype.exceptions import *
 from ..ethtype.transaction import EthTransaction
 from ...logger import Logger, formatted_log
-
+from ...prometheus_metric import exporting_rpc_requested, exporting_rpc_failed
 
 rpc_logger = Logger("RPC-Client", logging.INFO)
 RPC_RETRY_MAX_RETRY_NUM = 20
@@ -130,8 +130,10 @@ class EthRpcClient:
         }
         headers = {'Content-type': 'application/json'}
         try:
+            exporting_rpc_requested()
             response = requests.post(self.url, json=body, headers=headers)
         except Exception as e:
+            exporting_rpc_failed()
             formatted_log(rpc_logger, log_id="RPCException", related_chain=self._chain_index, log_data=str(e))
             print("request will be re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec))
             time.sleep(self.__rpc_server_downtime_allow_sec)
@@ -141,10 +143,12 @@ class EthRpcClient:
         try:
             code = response.status_code
             if code < 200 or 400 < code:
+                exporting_rpc_failed()
                 raise Exception("OutOfStatusCode: code({}), msg({})".format(code, response.content))
             else:
                 response_json = response.json()
         except Exception as e:
+            exporting_rpc_failed()
             formatted_log(
                 rpc_logger,
                 log_id="RequestError",
@@ -157,6 +161,7 @@ class EthRpcClient:
         if "result" in response_json.keys():
             return response_json["result"]
         else:
+            exporting_rpc_failed()
             raise Exception(response_json["error"])
 
     @property
