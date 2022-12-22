@@ -13,6 +13,10 @@ from .rpchandler import EthRpcClient, DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_P
 from ..ethtype.transaction import EthTransaction
 
 
+DEFAULT_LATEST_HEIGHT = 0
+DEFAULT_MAX_LOG_NUM = 1000
+
+
 class EthContractHandler(EthRpcClient):
     def __init__(
             self,
@@ -26,8 +30,8 @@ class EthContractHandler(EthRpcClient):
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
             transaction_commit_multiplier: int = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER,
             events: List[dict] = None,
-            latest_height: int = 0,
-            max_log_num: int = 1000
+            latest_height: int = DEFAULT_LATEST_HEIGHT,
+            max_log_num: int = DEFAULT_MAX_LOG_NUM
     ):
         super().__init__(
             url_with_access_key,
@@ -39,8 +43,8 @@ class EthContractHandler(EthRpcClient):
             transaction_commit_multiplier
         )
 
-        self._matured_latest_height = latest_height if latest_height is None else 0
-        self.__max_log_num =  1000 if max_log_num is None else max_log_num
+        self._matured_latest_height = DEFAULT_LATEST_HEIGHT if latest_height is None else latest_height
+        self.__max_log_num = DEFAULT_MAX_LOG_NUM if max_log_num is None else max_log_num
 
         self._contracts = dict()
         self._contract_name_by_event_name = dict()
