@@ -241,7 +241,7 @@ class EventBridge(MultiChainMonitor):
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
             sender_alive = sender_th.is_alive()
-            exporting_thread_alive(self.active_account.address, "sender", sender_alive)
+            exporting_thread_alive("sender", sender_alive)
             if not sender_alive:
                 formatted_log(
                     bridge_logger,
