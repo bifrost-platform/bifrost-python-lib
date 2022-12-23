@@ -2,7 +2,7 @@ from prometheus_client import Gauge, start_http_server
 
 
 class PrometheusExporter:
-    PROMETHEUS_ON = True
+    PROMETHEUS_ON = False
     PROMETHEUS_SEVER_PORT = 8000
 
     MONITOR_THREAD_ALIVE = Gauge("monitor_alive", "Description")
@@ -11,9 +11,9 @@ class PrometheusExporter:
     RPC_REQUESTED = Gauge("rpc_requested", "Description")
 
     @staticmethod
-    def init_prometheus_exporter():
-        if not PrometheusExporter.PROMETHEUS_ON:
-            return
+    def init_prometheus_exporter(port: int = 8000):
+        PrometheusExporter.PROMETHEUS_ON = True
+        PrometheusExporter.PROMETHEUS_SEVER_PORT = port
         start_http_server(PrometheusExporter.PROMETHEUS_SEVER_PORT)
 
     @staticmethod
