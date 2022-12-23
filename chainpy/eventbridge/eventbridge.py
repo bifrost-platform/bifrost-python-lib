@@ -15,7 +15,7 @@ from ..logger import Logger, formatted_log
 from .utils import timestamp_msec
 from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
-from ..prometheus_metric import exporting_thread_alive, init_prometheus_exporter, PrometheusExporter
+from ..prometheus_metric import PrometheusExporter
 
 consumer_logger = Logger("Consumer", logging.INFO)
 receipt_checker_logger = Logger("Receipt", logging.INFO)

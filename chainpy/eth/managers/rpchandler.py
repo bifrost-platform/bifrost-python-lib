@@ -14,7 +14,7 @@ from ..ethtype.chaindata import EthBlock, EthReceipt, EthLog
 from ..ethtype.exceptions import *
 from ..ethtype.transaction import EthTransaction
 from ...logger import Logger, formatted_log
-from ...prometheus_metric import exporting_rpc_requested, exporting_rpc_failed, PrometheusExporter
+from ...prometheus_metric import PrometheusExporter
 
 rpc_logger = Logger("RPC-Client", logging.INFO)
 RPC_RETRY_MAX_RETRY_NUM = 20
