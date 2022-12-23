@@ -43,7 +43,13 @@ class PrometheusExporter:
                 "rpc_requests_on_{}".format(chain_name),
                 "Description"
             )
+            PrometheusExporter.RPC_FAILED[chain_index] = Gauge(
+                "rpc_failures_on_{}".format(chain_name),
+                "Description"
+            )
             PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
+            PrometheusExporter.RPC_FAILED[chain_index].set(0)
+
         PrometheusExporter.RPC_REQUESTED[chain_index].inc()
 
     @staticmethod
@@ -54,10 +60,15 @@ class PrometheusExporter:
         gauge = PrometheusExporter.RPC_FAILED.get(chain_index)
         chain_name = chain_index.name.lower()
         if gauge is None:
+            PrometheusExporter.RPC_REQUESTED[chain_index] = Gauge(
+                "rpc_requests_on_{}".format(chain_name),
+                "Description"
+            )
             PrometheusExporter.RPC_FAILED[chain_index] = Gauge(
                 "rpc_failures_on_{}".format(chain_name),
                 "Description"
             )
+            PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
             PrometheusExporter.RPC_FAILED[chain_index].set(0)
 
         PrometheusExporter.RPC_FAILED[chain_index].inc()
