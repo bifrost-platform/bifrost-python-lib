@@ -15,7 +15,7 @@ from ..logger import Logger, formatted_log
 from .utils import timestamp_msec
 from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
-from ..prometheus_metric import exporting_thread_alive, init_prometheus_exporter
+from ..prometheus_metric import exporting_thread_alive, init_prometheus_exporter, PrometheusExporter
 
 consumer_logger = Logger("Consumer", logging.INFO)
 receipt_checker_logger = Logger("Receipt", logging.INFO)
@@ -212,7 +212,7 @@ class EventBridge(MultiChainMonitor):
         """
         An entry method to run relayer including runners: chain monitor and transaction sender
         """
-        init_prometheus_exporter()
+        PrometheusExporter.init_prometheus_exporter()
 
         # bootstrap historical event; result is dummy return for process sync.
         result = self.bootstrap_chain_events()
@@ -230,7 +230,7 @@ class EventBridge(MultiChainMonitor):
 
         while True:
             monitor_alive = monitor_th.is_alive()
-            exporting_thread_alive("monitor", monitor_alive)
+            PrometheusExporter.exporting_thread_alive("monitor", monitor_alive)
             if not monitor_alive:
                 formatted_log(
                     bridge_logger,
@@ -241,7 +241,7 @@ class EventBridge(MultiChainMonitor):
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
             sender_alive = sender_th.is_alive()
-            exporting_thread_alive("sender", sender_alive)
+            PrometheusExporter.exporting_thread_alive("sender", sender_alive)
             if not sender_alive:
                 formatted_log(
                     bridge_logger,
