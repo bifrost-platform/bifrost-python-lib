@@ -40,7 +40,7 @@ class PrometheusExporter:
         gauge = PrometheusExporter.RPC_REQUESTED.get(chain_index)
         if gauge is None:
             PrometheusExporter.RPC_REQUESTED[chain_index] = Gauge(
-                "rpc_failures_on_{}".format(chain_name),
+                "rpc_requests_on_{}".format(chain_name),
                 "Description"
             )
         PrometheusExporter.RPC_REQUESTED[chain_index].inc()
