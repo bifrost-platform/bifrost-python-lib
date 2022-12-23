@@ -212,8 +212,6 @@ class EventBridge(MultiChainMonitor):
         """
         An entry method to run relayer including runners: chain monitor and transaction sender
         """
-        PrometheusExporter.init_prometheus_exporter()
-
         # bootstrap historical event; result is dummy return for process sync.
         result = self.bootstrap_chain_events()
 
