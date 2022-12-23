@@ -43,6 +43,7 @@ class PrometheusExporter:
                 "rpc_requests_on_{}".format(chain_name),
                 "Description"
             )
+            PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
         PrometheusExporter.RPC_REQUESTED[chain_index].inc()
 
     @staticmethod
@@ -57,5 +58,6 @@ class PrometheusExporter:
                 "rpc_failures_on_{}".format(chain_name),
                 "Description"
             )
+            PrometheusExporter.RPC_FAILED[chain_index].set(0)
 
         PrometheusExporter.RPC_FAILED[chain_index].inc()
