@@ -5,12 +5,18 @@ from prometheus_client import Gauge, start_http_server
 from chainpy.eth.ethtype.consts import ChainIndex
 
 
+MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"
+SENDER_ALIVE_QUERY_NAME = "relayer_sender_alive"
+RPC_REQUESTS_QUERY_NAME = "relayer_rpc_requests_on_"
+RPC_FAILURES_QUERY_NAME = "relayer_rpc_failures_on_"
+
+
 class PrometheusExporter:
     PROMETHEUS_ON = False
     PROMETHEUS_SEVER_PORT = 8000
 
-    MONITOR_THREAD_ALIVE = Gauge("monitor_alive", "Description")
-    SENDER_THREAD_ALIVE = Gauge("sender_alive", "Description")
+    MONITOR_THREAD_ALIVE = Gauge(MONITOR_ALIVE_QUERY_NAME, "Description")
+    SENDER_THREAD_ALIVE = Gauge(SENDER_ALIVE_QUERY_NAME, "Description")
     RPC_REQUESTED: Dict[ChainIndex, Gauge] = dict()
     RPC_FAILED: Dict[ChainIndex, Gauge] = dict()
 
@@ -40,11 +46,11 @@ class PrometheusExporter:
         gauge = PrometheusExporter.RPC_REQUESTED.get(chain_index)
         if gauge is None:
             PrometheusExporter.RPC_REQUESTED[chain_index] = Gauge(
-                "rpc_requests_on_{}".format(chain_name),
+                RPC_REQUESTS_QUERY_NAME.format(chain_name),
                 "Description"
             )
             PrometheusExporter.RPC_FAILED[chain_index] = Gauge(
-                "rpc_failures_on_{}".format(chain_name),
+                RPC_FAILURES_QUERY_NAME.format(chain_name),
                 "Description"
             )
             PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
@@ -61,11 +67,11 @@ class PrometheusExporter:
         chain_name = chain_index.name.lower()
         if gauge is None:
             PrometheusExporter.RPC_REQUESTED[chain_index] = Gauge(
-                "rpc_requests_on_{}".format(chain_name),
+                RPC_REQUESTS_QUERY_NAME.format(chain_name),
                 "Description"
             )
             PrometheusExporter.RPC_FAILED[chain_index] = Gauge(
-                "rpc_failures_on_{}".format(chain_name),
+                RPC_FAILURES_QUERY_NAME.format(chain_name),
                 "Description"
             )
             PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
