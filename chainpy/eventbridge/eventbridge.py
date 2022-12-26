@@ -15,6 +15,7 @@ from ..logger import Logger, formatted_log
 from .utils import timestamp_msec
 from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
+from ..prometheus_metric import PrometheusExporter
 
 consumer_logger = Logger("Consumer", logging.INFO)
 receipt_checker_logger = Logger("Receipt", logging.INFO)
@@ -226,7 +227,9 @@ class EventBridge(MultiChainMonitor):
         sender_th.start()
 
         while True:
-            if not monitor_th.is_alive():
+            monitor_alive = monitor_th.is_alive()
+            PrometheusExporter.exporting_thread_alive("monitor", monitor_alive)
+            if not monitor_alive:
                 formatted_log(
                     bridge_logger,
                     relayer_addr=self.active_account.address,
@@ -234,7 +237,10 @@ class EventBridge(MultiChainMonitor):
                     log_data="Monitor thread has been dead. re-boot after 60 secs")
                 sleep(60)
                 os.execl(sys.executable, sys.executable, *sys.argv)
-            if not sender_th.is_alive():
+
+            sender_alive = sender_th.is_alive()
+            PrometheusExporter.exporting_thread_alive("sender", sender_alive)
+            if not sender_alive:
                 formatted_log(
                     bridge_logger,
                     relayer_addr=self.active_account.address,

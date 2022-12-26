@@ -4,3 +4,4 @@ eth-account
 pycryptodome
 requests
 dataclasses-json
+prometheus-client
