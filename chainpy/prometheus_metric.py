@@ -7,8 +7,8 @@ from chainpy.eth.ethtype.consts import ChainIndex
 
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"
 SENDER_ALIVE_QUERY_NAME = "relayer_sender_alive"
-RPC_REQUESTS_QUERY_NAME = "relayer_rpc_requests_on_"
-RPC_FAILURES_QUERY_NAME = "relayer_rpc_failures_on_"
+RPC_REQUESTS_QUERY_NAME = "relayer_rpc_requests_on_{}"
+RPC_FAILURES_QUERY_NAME = "relayer_rpc_failures_on_{}"
 
 
 class PrometheusExporter:
