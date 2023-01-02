@@ -7,8 +7,8 @@ from chainpy.eth.ethtype.consts import ChainIndex
 
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"
 SENDER_ALIVE_QUERY_NAME = "relayer_sender_alive"
-RPC_REQUESTS_QUERY_NAME = "relayer_rpc_requests_on_{}"
-RPC_FAILURES_QUERY_NAME = "relayer_rpc_failures_on_{}"
+RPC_REQUESTS_QUERY_NAME = "relayer_rpc_requests_on_chain"
+RPC_FAILURES_QUERY_NAME = "relayer_rpc_failures_on_chain"
 
 
 class PrometheusExporter:
@@ -17,8 +17,9 @@ class PrometheusExporter:
 
     MONITOR_THREAD_ALIVE = Gauge(MONITOR_ALIVE_QUERY_NAME, "Description")
     SENDER_THREAD_ALIVE = Gauge(SENDER_ALIVE_QUERY_NAME, "Description")
-    RPC_REQUESTED: Dict[ChainIndex, Gauge] = dict()
-    RPC_FAILED: Dict[ChainIndex, Gauge] = dict()
+    RPC_CHAIN_INIT: Dict[str, bool] = dict()
+    RPC_REQUESTED = Gauge(RPC_REQUESTS_QUERY_NAME, "Description", ["chain"])
+    RPC_FAILED = Gauge(RPC_FAILURES_QUERY_NAME, "Description", ["chain"])
 
     @staticmethod
     def init_prometheus_exporter(port: int = 8000):
@@ -43,38 +44,20 @@ class PrometheusExporter:
             return
 
         chain_name = chain_index.name.lower()
-        gauge = PrometheusExporter.RPC_REQUESTED.get(chain_index)
-        if gauge is None:
-            PrometheusExporter.RPC_REQUESTED[chain_index] = Gauge(
-                RPC_REQUESTS_QUERY_NAME.format(chain_name),
-                "Description"
-            )
-            PrometheusExporter.RPC_FAILED[chain_index] = Gauge(
-                RPC_FAILURES_QUERY_NAME.format(chain_name),
-                "Description"
-            )
-            PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
-            PrometheusExporter.RPC_FAILED[chain_index].set(0)
+        if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
+            PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
+            PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
 
-        PrometheusExporter.RPC_REQUESTED[chain_index].inc()
+        PrometheusExporter.RPC_REQUESTED.labels(chain_name).inc()
 
     @staticmethod
     def exporting_rpc_failed(chain_index: ChainIndex):
         if not PrometheusExporter.PROMETHEUS_ON:
             return
 
-        gauge = PrometheusExporter.RPC_FAILED.get(chain_index)
         chain_name = chain_index.name.lower()
-        if gauge is None:
-            PrometheusExporter.RPC_REQUESTED[chain_index] = Gauge(
-                RPC_REQUESTS_QUERY_NAME.format(chain_name),
-                "Description"
-            )
-            PrometheusExporter.RPC_FAILED[chain_index] = Gauge(
-                RPC_FAILURES_QUERY_NAME.format(chain_name),
-                "Description"
-            )
-            PrometheusExporter.RPC_REQUESTED[chain_index].set(0)
-            PrometheusExporter.RPC_FAILED[chain_index].set(0)
+        if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
+            PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
+            PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
 
-        PrometheusExporter.RPC_FAILED[chain_index].inc()
+        PrometheusExporter.RPC_FAILED.labels(chain_name).inc()
