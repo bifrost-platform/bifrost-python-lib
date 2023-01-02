@@ -47,6 +47,7 @@ class PrometheusExporter:
         if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
             PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
             PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
+            PrometheusExporter.RPC_CHAIN_INIT[chain_name] = True
 
         PrometheusExporter.RPC_REQUESTED.labels(chain_name).inc()
 
@@ -59,5 +60,6 @@ class PrometheusExporter:
         if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
             PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
             PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
+            PrometheusExporter.RPC_CHAIN_INIT[chain_name] = True
 
         PrometheusExporter.RPC_FAILED.labels(chain_name).inc()
