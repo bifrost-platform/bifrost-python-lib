@@ -12,20 +12,11 @@ if TYPE_CHECKING:
     from eventbridge import EventBridge
 
 
-class CollectedData:
-    def __init__(self, src_id: str, data: EthHashBytes):
-        self.chain_index = Chain.OFFCHAIN
-        self.src_id = src_id
-        self.data = data
-
-
 class PeriodicEventABC(metaclass=ABCMeta):
     def __init__(self, manager: "EventBridge", period_sec: int, time_lock: int = None):
         self.__period_sec = period_sec
         self.__time_lock = timestamp_msec() if time_lock is None else time_lock
         self.__manager = manager
-
-        self.__on_chain = Chain.OFFCHAIN
 
         self.__task_status = TaskStatus.SendTX
         self.__receipt_params: Optional[ReceiptParams] = None
@@ -61,10 +52,6 @@ class PeriodicEventABC(metaclass=ABCMeta):
     @property
     def period_sec(self) -> int:
         return self.__period_sec
-
-    @property
-    def on_chain(self) -> Chain:
-        return self.__on_chain
 
     @property
     def task_status(self) -> TaskStatus:

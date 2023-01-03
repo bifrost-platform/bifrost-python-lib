@@ -7,11 +7,9 @@ class EnumInterface(Enum):
     def from_name(cls, name):
         return cls.__dict__[name]
 
-    def __str__(self):
-        return self.name
-
-    def __repr__(self) -> str:
-        return self.name
+    @classmethod
+    def str_with_size(cls):
+        return cls.__name__ + "-{}".format(cls.size())
 
     @staticmethod
     def is_composed() -> bool:
