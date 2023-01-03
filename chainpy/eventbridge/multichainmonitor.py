@@ -83,6 +83,10 @@ class MultiChainMonitor(MultiChainManager):
     def queue(self) -> TimePriorityQueue:
         return self.__queue
 
+    @queue.setter
+    def queue(self, queue: TimePriorityQueue):
+        self.__queue = queue
+
     def register_chain_event_obj(self, event_name: str, event_type: type):
         if not issubclass(event_type, ChainEventABC):
             raise Exception("event type to be registered must subclass of EventABC")
@@ -131,11 +135,12 @@ class MultiChainMonitor(MultiChainManager):
                 chain_event = event_type.init(detected_event, timestamp_msec(), self)
                 self.__queue.enqueue(chain_event)
 
-                formatted_log(
-                    monitor_logger,
-                    relayer_addr=self.active_account.address,
-                    log_id=chain_event.summary(),
-                    related_chain=chain_event.on_chain,
-                    log_data="Detected"
-                )
+                if chain_event is not None:
+                    formatted_log(
+                        monitor_logger,
+                        relayer_addr=self.active_account.address,
+                        log_id=chain_event.summary(),
+                        related_chain=chain_event.on_chain,
+                        log_data="Detected"
+                    )
             time.sleep(self.multichain_config["chain_monitor_period_sec"])

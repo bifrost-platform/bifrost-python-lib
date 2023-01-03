@@ -6,7 +6,7 @@ from .utils import merge_dict
 from ..ethtype.account import EthAccount
 from ..ethtype.amount import EthAmount
 from ..ethtype.chaindata import EthReceipt
-from ..ethtype.consts import ChainIndex
+from ..ethtype.consts import Chain
 from ..ethtype.contract import EthContract
 from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.transaction import EthTransaction
@@ -20,7 +20,7 @@ class MultiChainManager:
         private_key = entity_config.get("secret_hex")
         if private_key is not None and private_key != "":
             self.__active_account = EthAccount.from_secret(private_key)
-        self.__supported_chains = [ChainIndex[chain_name] for chain_name in entity_config["supporting_chains"]]
+        self.__supported_chains = [Chain[chain_name] for chain_name in entity_config["supporting_chains"]]
 
         # config for each chain
         self.__chain_managers = dict()
@@ -67,18 +67,18 @@ class MultiChainManager:
     def multichain_config(self) -> dict:
         return self.__multichain_config
 
-    def get_chain_manager_of(self, chain_index: ChainIndex) -> EthChainManager:
+    def get_chain_manager_of(self, chain_index: Chain) -> EthChainManager:
         return self.__chain_managers.get(chain_index)
 
-    def get_contract_obj_on(self, chain_index: ChainIndex, contract_name: str) -> Optional[EthContract]:
+    def get_contract_obj_on(self, chain_index: Chain, contract_name: str) -> Optional[EthContract]:
         return self.get_chain_manager_of(chain_index).get_contract_by_name(contract_name)
 
-    def world_call(self, chain_index: ChainIndex, contract_name: str, method_name: str, method_params: list):
+    def world_call(self, chain_index: Chain, contract_name: str, method_name: str, method_params: list):
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.call_transaction(contract_name, method_name, method_params)
 
     def world_build_transaction(self,
-                                chain_index: ChainIndex,
+                                chain_index: Chain,
                                 contract_name: str,
                                 method_name: str,
                                 method_params: list, value: EthAmount = None) -> EthTransaction:
@@ -86,22 +86,22 @@ class MultiChainManager:
         return chain_manager.build_transaction(contract_name, method_name, method_params, value)
 
     def world_send_transaction(self,
-                               chain_index: ChainIndex,
+                               chain_index: Chain,
                                tx_with_fee: EthTransaction,
                                gas_limit_multiplier: float = 1.0) -> EthHashBytes:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.send_transaction(tx_with_fee, gas_limit_multiplier=gas_limit_multiplier)
 
     def world_receipt_with_wait(
-            self, chain_index: ChainIndex, tx_hash: EthHashBytes, matured: bool = True) -> EthReceipt:
+            self, chain_index: Chain, tx_hash: EthHashBytes, matured: bool = True) -> EthReceipt:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.eth_receipt_with_wait(tx_hash, matured)
 
-    def world_receipt_without_wait(self, chain_index: ChainIndex, tx_hash: EthHashBytes) -> EthReceipt:
+    def world_receipt_without_wait(self, chain_index: Chain, tx_hash: EthHashBytes) -> EthReceipt:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.eth_receipt_without_wait(tx_hash)
 
-    def collect_unchecked_multichain_event_in_range(self, event_name: str, _range: Dict[ChainIndex, List[int]]):
+    def collect_unchecked_multichain_event_in_range(self, event_name: str, _range: Dict[Chain, List[int]]):
         unchecked_events = list()
         for chain_index in self.__supported_chains:
             chain_manager = self.get_chain_manager_of(chain_index)
@@ -121,11 +121,11 @@ class MultiChainManager:
         return contract_obj.decode_event(detected_event.event_name, detected_event.data)
 
     def world_transfer_coin(
-            self, chain_index: ChainIndex, to_addr: EthAddress, value: EthAmount) -> EthHashBytes:
+            self, chain_index: Chain, to_addr: EthAddress, value: EthAmount) -> EthHashBytes:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.transfer_native_coin(to_addr, value)
 
-    def world_native_balance(self, chain_index: ChainIndex, addr: EthAddress = None) -> EthAmount:
+    def world_native_balance(self, chain_index: Chain, addr: EthAddress = None) -> EthAmount:
         chain_manager = self.get_chain_manager_of(chain_index)
 
         if addr is None:
@@ -143,7 +143,7 @@ class TestTransaction(unittest.TestCase):
         self.serialized_tx = "0xf90153f9015082bfc082301f0186015d3ef7980183036e54947abd332cf88ca31725fffb21795f90583744535280b901246196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874ec0"
 
     def test_serialize_tx_from_rpc(self):
-        tx = self.cli.get_chain_manager_of(ChainIndex.BIFROST).eth_get_transaction_by_hash(self.target_tx_hash)
+        tx = self.cli.get_chain_manager_of(Chain.BIFROST).eth_get_transaction_by_hash(self.target_tx_hash)
         self.assertEqual(tx.serialize(), self.serialized_tx)
 
     def test_serialize_tx_built(self):

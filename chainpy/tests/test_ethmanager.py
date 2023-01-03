@@ -1,11 +1,11 @@
 import json
 
 from chainpy.eth.ethtype.amount import EthAmount
-from chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.consts import Chain
 
 
 def test_manager_init(ganache_eth_chain_manager):
-    assert ganache_eth_chain_manager.chain_index == ChainIndex.ETHEREUM
+    assert ganache_eth_chain_manager.chain_index == Chain.ETHEREUM
     assert ganache_eth_chain_manager.chain_id == 0x539
     assert ganache_eth_chain_manager.account.address == "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1"  # ganache default
     assert ganache_eth_chain_manager.latest_height == 0

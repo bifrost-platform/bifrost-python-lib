@@ -2,7 +2,7 @@ from typing import Dict
 
 from prometheus_client import Gauge, start_http_server
 
-from chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.consts import Chain
 
 
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"
@@ -39,7 +39,7 @@ class PrometheusExporter:
             raise Exception("Not supported thread_type")
 
     @staticmethod
-    def exporting_rpc_requested(chain_index: ChainIndex):
+    def exporting_rpc_requested(chain_index: Chain):
         if not PrometheusExporter.PROMETHEUS_ON:
             return
 
@@ -52,7 +52,7 @@ class PrometheusExporter:
         PrometheusExporter.RPC_REQUESTED.labels(chain_name).inc()
 
     @staticmethod
-    def exporting_rpc_failed(chain_index: ChainIndex):
+    def exporting_rpc_failed(chain_index: Chain):
         if not PrometheusExporter.PROMETHEUS_ON:
             return
 

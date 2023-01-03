@@ -1,6 +1,6 @@
 import pytest
 
-from chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.consts import Chain
 from chainpy.eth.ethtype.hexbytes import EthAddress
 from chainpy.eth.managers.utils import EntityRootConfig
 from chainpy.eth.managers.ethchainmanager import EthChainManager
@@ -26,7 +26,7 @@ def ganache_eth_chain_manager() -> EthChainManager:
         }
     }
     config_obj = EntityRootConfig.from_dict(manager_config)
-    return EthChainManager(ChainIndex.ETHEREUM, config_obj)
+    return EthChainManager(Chain.ETHEREUM, config_obj)
 
 
 @pytest.fixture

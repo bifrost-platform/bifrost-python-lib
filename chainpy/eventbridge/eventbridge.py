@@ -6,7 +6,7 @@ from time import sleep
 from typing import Optional, Union, Any, Type
 
 from .multichainmonitor import MultiChainMonitor
-from ..eth.ethtype.consts import ChainIndex
+from ..eth.ethtype.consts import Chain
 
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.exceptions import RpcEVMError
@@ -109,7 +109,7 @@ class EventBridge(MultiChainMonitor):
             next_event = event.clone_next()
             self.queue.enqueue(next_event)
 
-        if dst_chain == ChainIndex.NONE or dst_chain is None:
+        if dst_chain == Chain.NONE or dst_chain is None:
             return None
 
         try:

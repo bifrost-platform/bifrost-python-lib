@@ -1,12 +1,12 @@
 from typing import Union
 
 from ..ethtype.chaindata import EthLog
-from ..ethtype.consts import ChainIndex
+from ..ethtype.consts import Chain
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 
 
 class DetectedEvent:
-    def __init__(self, chain_index: ChainIndex, contract_name: str, event_name: str, log: EthLog):
+    def __init__(self, chain_index: Chain, contract_name: str, event_name: str, log: EthLog):
         self.chain_index = chain_index
         self.contract_name = contract_name
         self.event_name = event_name
@@ -22,7 +22,7 @@ class DetectedEvent:
 
     @classmethod
     def from_dict(cls, detected_event_dict: dict):
-        chain_index = eval("ChainIndex." + detected_event_dict["chain_name"].upper())
+        chain_index = eval("Chain." + detected_event_dict["chain_name"].upper())
         log_obj = EthLog.from_dict(detected_event_dict["log"])
         return cls(chain_index, detected_event_dict["contract_name"], detected_event_dict["event_name"], log_obj)
 

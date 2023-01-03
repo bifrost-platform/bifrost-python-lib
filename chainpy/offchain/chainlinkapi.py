@@ -6,7 +6,7 @@ from .chainlinkconst import eth_addresses_by_symbol
 from .priceapiabc import PriceApiABC, Symbol, MarketData, QueryId
 from ..eth.managers.rpchandler import EthRpcClient
 from ..eth.ethtype.amount import EthAmount
-from ..eth.ethtype.consts import ChainIndex
+from ..eth.ethtype.consts import Chain
 
 
 class ChainlinkApi(PriceApiABC):
@@ -16,7 +16,7 @@ class ChainlinkApi(PriceApiABC):
         config_dict = {
             "ethereum": {"chain_name": "ETHEREUM", "block_period_sec": 3, "url_with_access_key": api_base_url}
         }
-        self.__rpc_cli = EthRpcClient.from_config_dict(config_dict, chain_index=ChainIndex.ETHEREUM)
+        self.__rpc_cli = EthRpcClient.from_config_dict(config_dict, chain_index=Chain.ETHEREUM)
 
     def ping(self) -> bool:
         return isinstance(self.__rpc_cli.chain_id, int)

@@ -1,6 +1,6 @@
 import logging.handlers
 
-from chainpy.eth.ethtype.consts import ChainIndex
+from chainpy.eth.ethtype.consts import Chain
 from chainpy.eth.ethtype.hexbytes import EthAddress
 
 
@@ -16,8 +16,10 @@ def formatted_log(
         logger_obj,
         relayer_addr: EthAddress = EthAddress.default(),
         log_id: str = None,
-        related_chain: ChainIndex = None,
+        related_chain: Chain = None,
         log_data: str = None):
+    if log_id is None:
+        return
     msg = "{}:{}:{}:{}".format(
         relayer_addr.hex()[:10],
         log_id,

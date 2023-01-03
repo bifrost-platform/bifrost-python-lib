@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Optional
 
 from ..eth.managers.contracthandler import DetectedEvent
 from ..eth.ethtype.chaindata import EthLog
-from ..eth.ethtype.consts import ChainIndex
+from ..eth.ethtype.consts import Chain
 from ..utils import ensure_path_endswith_slash_char
 
 
@@ -19,7 +19,7 @@ def safe_create_directory(path_: str):
 
 
 EventDict = Optional[Dict[str, List[DetectedEvent]]]
-RangesDict = Optional[Dict[ChainIndex, Tuple[int, int]]]
+RangesDict = Optional[Dict[Chain, Tuple[int, int]]]
 
 
 def load_events_from_file(entity_cache_dir_path: str) -> (EventDict, RangesDict):
@@ -33,7 +33,7 @@ def load_events_from_file(entity_cache_dir_path: str) -> (EventDict, RangesDict)
         with open(entity_cache_dir_path + "ranges.json", "r") as json_data:
             ranges_json = json.load(json_data)
             for chain_name, _range in ranges_json.items():
-                chain_index = eval("ChainIndex." + chain_name)
+                chain_index = eval("Chain." + chain_name)
                 ranges[chain_index] = _range
     except FileNotFoundError:
         return None, None
@@ -50,7 +50,7 @@ def load_events_from_file(entity_cache_dir_path: str) -> (EventDict, RangesDict)
             detected_events = list()
             for event in loaded_events:
                 event_obj = DetectedEvent(
-                    eval("ChainIndex." + event["chain_name"].upper()),
+                    eval("Chain." + event["chain_name"].upper()),
                     event["contract_name"],
                     event["event_name"],
                     EthLog.from_dict(event["log"])
@@ -65,7 +65,7 @@ def load_events_from_file(entity_cache_dir_path: str) -> (EventDict, RangesDict)
 
 def write_events_to_file(
         cache_dir_path: str,
-        ranges: Dict[ChainIndex, Tuple[int, int]],
+        ranges: Dict[Chain, Tuple[int, int]],
         events_dict: Dict[str, List[DetectedEvent]]):
 
     if cache_dir_path is None:

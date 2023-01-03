@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional, TYPE_CHECKING
 
-from ..eth.ethtype.consts import ChainIndex
+from ..eth.ethtype.consts import Chain
 from ..eth.ethtype.hexbytes import EthHashBytes
 
 from .chaineventabc import TaskStatus, ReceiptParams, CallParams, CallParamTuple, SendParamTuple, \
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class CollectedData:
     def __init__(self, src_id: str, data: EthHashBytes):
-        self.chain_index = ChainIndex.OFFCHAIN
+        self.chain_index = Chain.OFFCHAIN
         self.src_id = src_id
         self.data = data
 
@@ -25,7 +25,7 @@ class PeriodicEventABC(metaclass=ABCMeta):
         self.__time_lock = timestamp_msec() if time_lock is None else time_lock
         self.__manager = manager
 
-        self.__on_chain = ChainIndex.OFFCHAIN
+        self.__on_chain = Chain.OFFCHAIN
 
         self.__task_status = TaskStatus.SendTX
         self.__receipt_params: Optional[ReceiptParams] = None
@@ -63,15 +63,15 @@ class PeriodicEventABC(metaclass=ABCMeta):
         return self.__period_sec
 
     @property
-    def on_chain(self) -> ChainIndex:
+    def on_chain(self) -> Chain:
         return self.__on_chain
 
     @property
     def task_status(self) -> TaskStatus:
         return self.__task_status
 
-    def switch_to_check_receipt(self, target_chain: ChainIndex, tx_hash: EthHashBytes, time_lock: int):
-        if not isinstance(target_chain, ChainIndex):
+    def switch_to_check_receipt(self, target_chain: Chain, tx_hash: EthHashBytes, time_lock: int):
+        if not isinstance(target_chain, Chain):
             raise Exception("receipt target chain: type error")
         if not isinstance(tx_hash, EthHashBytes):
             raise Exception("receipt tx_hash: type error")

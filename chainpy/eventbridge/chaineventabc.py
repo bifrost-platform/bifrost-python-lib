@@ -3,27 +3,27 @@ from enum import Enum
 from typing import Tuple, Optional, List, Dict, Union, TYPE_CHECKING
 
 from ..eth.managers.contracthandler import DetectedEvent
-from ..eth.ethtype.consts import ChainIndex
+from ..eth.ethtype.consts import Chain
 from ..eth.ethtype.hexbytes import EthHashBytes
 
 if TYPE_CHECKING:
     from .eventbridge import EventBridge
 
-ReceiptParamTuple = Tuple[ChainIndex, EthHashBytes]
-SendParamTuple = Tuple[ChainIndex, str, str, Union[tuple, list]]
-CallParamTuple = Tuple[ChainIndex, str, str, Union[tuple, list]]
+ReceiptParamTuple = Tuple[Chain, EthHashBytes]
+SendParamTuple = Tuple[Chain, str, str, Union[tuple, list]]
+CallParamTuple = Tuple[Chain, str, str, Union[tuple, list]]
 
 
 BASIC_GAS_LIMIT_MULTIPLIER = 1.2
 
 
 class ReceiptParams:
-    def __init__(self, target_chain: ChainIndex, tx_hash: EthHashBytes):
+    def __init__(self, target_chain: Chain, tx_hash: EthHashBytes):
         self.__on_chain = target_chain
         self.__tx_hash = tx_hash
 
     @property
-    def on_chain(self) -> ChainIndex:
+    def on_chain(self) -> Chain:
         return self.__on_chain
 
     @property
@@ -35,7 +35,7 @@ class ReceiptParams:
 
 
 class CallParams:
-    def __init__(self, target_chain: ChainIndex, contract_name: str, method_name: str, params: Union[tuple, list]):
+    def __init__(self, target_chain: Chain, contract_name: str, method_name: str, params: Union[tuple, list]):
         self.__on_chain = target_chain
         self.__contract_name = contract_name
         self.__method_name = method_name
@@ -107,15 +107,15 @@ class ChainEventABC(metaclass=ABCMeta):
         return self.__decoded_data
 
     @property
-    def on_chain(self) -> ChainIndex:
+    def on_chain(self) -> Chain:
         return self.__detected_event.chain_index
 
     @property
     def task_status(self) -> TaskStatus:
         return self.__task_status
 
-    def switch_to_check_receipt(self, target_chain: ChainIndex, tx_hash: EthHashBytes, time_lock: int):
-        if not isinstance(target_chain, ChainIndex):
+    def switch_to_check_receipt(self, target_chain: Chain, tx_hash: EthHashBytes, time_lock: int):
+        if not isinstance(target_chain, Chain):
             raise Exception("receipt target chain: type error")
         if not isinstance(tx_hash, EthHashBytes):
             raise Exception("receipt tx_hash: type error")
@@ -180,6 +180,6 @@ class ChainEventABC(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def bootstrap(manager: "EventBridge", _range: Dict[ChainIndex, List[int]]) -> List['ChainEventABC']:
+    def bootstrap(manager: "EventBridge", _range: Dict[Chain, List[int]]) -> List['ChainEventABC']:
         """ unchecked events -erase-> remainders"""
         pass
