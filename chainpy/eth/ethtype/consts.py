@@ -32,24 +32,33 @@ class EnumInterface(Enum):
 
 class Chain(EnumInterface):
     # BITCOIN-like chains
-    NONE         = 0x00000000
-    BITCOIN      = 0x01000001
-    BITCOIN_CASH = 0x01000002
+    NONE = 0
+    BTC_MAIN = 536887296  # version of header
+    BTC_TEST = 536870912  # version of header
 
     # ETHEREUM-like chains
-    BIFROST      = 0x02000003
-    ETHEREUM     = 0x02000004
-    BINANCE      = 0x02000005
-    AVALANCHE    = 0x02000006
-    KLAYTN       = 0x02000007
-    POLYGON      = 0x02000008
+    BFC_MAIN = 0x0bfc
+    BFC_TEST = 0xbfc0
+
+    ETH_MAIN = 1
+    ETH_GOERLI = 5
+    ETH_SEPOLIA = 11155111
+
+    BNB_MAIN = 56
+    BNB_TEST = 97
+    AVAX_MAIN = 43114
+    AVAX_FUJI = 43113
+    KLAY_MAIN = 8217
+    KLAY_TEST = 1001
+    MATIC_MAIN = 137
+    MATIC_MUMBAI = 80001
 
     # for oracle
-    RESERVED_01  = 0x00000001
-    RESERVED_02  = 0x00000002
-    RESERVED_03  = 0x00000003
-    RESERVED_04  = 0x00000004
-    RESERVED_05  = 0x00000005
+    RESERVED_01  = 0xffffffff
+    RESERVED_02  = 0xfffffffe
+    RESERVED_03  = 0xfffffffd
+    RESERVED_04  = 0xfffffffc
+    RESERVED_05  = 0xfffffffb
 
     @staticmethod
     def is_composed() -> bool:
