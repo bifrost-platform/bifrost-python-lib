@@ -70,4 +70,4 @@ class Chain(EnumInterface):
 
     @staticmethod
     def size():
-        return 4
+        return 8
