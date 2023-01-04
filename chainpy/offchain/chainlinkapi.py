@@ -6,7 +6,7 @@ from .chainlinkconst import eth_addresses_by_symbol
 from .priceapiabc import PriceApiABC, Symbol, MarketData, QueryId
 from ..eth.managers.rpchandler import EthRpcClient
 from ..eth.ethtype.amount import EthAmount
-from ..eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 
 
 class ChainlinkApi(PriceApiABC):

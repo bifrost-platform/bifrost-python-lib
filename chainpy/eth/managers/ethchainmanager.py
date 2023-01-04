@@ -5,7 +5,7 @@ from typing import Optional, Union, List
 from .exceptions import select_exception
 from .rpchandler import DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, DEFAULT_BLOCK_AGING_BLOCKS, \
     DEFAULT_RPC_DOWN_ALLOW_SECS, DEFAULT_RPC_COMMIT_TIME_MULTIPLIER
-from ..ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.amount import EthAmount
 from ..ethtype.account import EthAccount

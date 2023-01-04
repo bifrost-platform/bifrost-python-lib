@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Tuple, Optional, List, Dict, Union, TYPE_CHECKING
 
 from ..eth.managers.contracthandler import DetectedEvent
-from ..eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..eth.ethtype.hexbytes import EthHashBytes
 
 if TYPE_CHECKING:

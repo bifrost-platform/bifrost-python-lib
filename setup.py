@@ -12,6 +12,9 @@ setup(
         "pycryptodome",
         "requests",
         "dataclasses-json",
-        "prometheus-client"
+        "prometheus-client",
+        "bridgeconsts @ git+https://github.com/bifrost-platform/solidity-contract-configs@230104"
+
+
     ]
 )

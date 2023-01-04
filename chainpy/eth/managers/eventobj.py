@@ -1,7 +1,7 @@
 from typing import Union
 
 from ..ethtype.chaindata import EthLog
-from ..ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 
 

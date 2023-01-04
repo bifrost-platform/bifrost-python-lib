@@ -8,7 +8,7 @@ from typing import List, Optional, Union, Callable
 
 from .utils import merge_dict
 from ..ethtype.amount import EthAmount
-from ..ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 from ..ethtype.chaindata import EthBlock, EthReceipt, EthLog
 from ..ethtype.exceptions import *

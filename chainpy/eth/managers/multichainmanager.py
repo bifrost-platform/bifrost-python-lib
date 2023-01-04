@@ -6,7 +6,7 @@ from .utils import merge_dict
 from ..ethtype.account import EthAccount
 from ..ethtype.amount import EthAmount
 from ..ethtype.chaindata import EthReceipt
-from ..ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..ethtype.contract import EthContract
 from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.transaction import EthTransaction

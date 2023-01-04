@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional, TYPE_CHECKING
 
-from ..eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..eth.ethtype.hexbytes import EthHashBytes
 
 from .chaineventabc import TaskStatus, ReceiptParams, CallParams, CallParamTuple, SendParamTuple, \

@@ -1,8 +1,6 @@
 from typing import Dict
-
 from prometheus_client import Gauge, start_http_server
-
-from chainpy.eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 
 
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"

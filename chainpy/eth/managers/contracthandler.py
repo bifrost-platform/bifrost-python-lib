@@ -2,7 +2,7 @@ import unittest
 from typing import List, Optional
 
 from .utils import merge_dict
-from ..ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..ethtype.contract import EthContract
 from ..ethtype.exceptions import RpcExceedRequestTime
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes

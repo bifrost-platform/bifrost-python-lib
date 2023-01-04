@@ -6,7 +6,7 @@ from time import sleep
 from typing import Optional, Union, Any, Type
 
 from .multichainmonitor import MultiChainMonitor
-from ..eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.exceptions import RpcEVMError

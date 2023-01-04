@@ -5,7 +5,7 @@ from typing import List, Tuple, Dict, Optional
 
 from ..eth.managers.contracthandler import DetectedEvent
 from ..eth.ethtype.chaindata import EthLog
-from ..eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from ..utils import ensure_path_endswith_slash_char
 
 
