@@ -13,8 +13,6 @@ setup(
         "requests",
         "dataclasses-json",
         "prometheus-client",
-        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@230104"
-
-
+        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@230105"
     ]
 )
