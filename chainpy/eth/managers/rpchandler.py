@@ -88,7 +88,7 @@ class EthRpcClient:
             chain_index = Chain[merged_config["chain_name"].upper()]
 
         if merged_config.get("chain_name") is None:
-            merged_config = merged_config[chain_index.name.lower()]
+            merged_config = merged_config[chain_index.name.upper()]
 
         return cls(
             merged_config["url_with_access_key"],
