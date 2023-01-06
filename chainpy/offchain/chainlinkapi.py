@@ -14,7 +14,7 @@ class ChainlinkApi(PriceApiABC):
         super().__init__(api_base_url, request_timeout_sec)
 
         config_dict = {
-            "ethereum": {"chain_name": "ETHEREUM", "block_period_sec": 3, "url_with_access_key": api_base_url}
+            "ethereum": {"chain_name": "ETH_MAIN", "block_period_sec": 3, "url_with_access_key": api_base_url}
         }
         self.__rpc_cli = EthRpcClient.from_config_dict(config_dict, chain_index=Chain.ETH_GOERLI)
 
