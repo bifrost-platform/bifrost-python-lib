@@ -16,7 +16,7 @@ class ChainlinkApi(PriceApiABC):
         config_dict = {
             "ETH_MAIN": {"chain_name": "ETH_MAIN", "block_period_sec": 3, "url_with_access_key": api_base_url}
         }
-        self.__rpc_cli = EthRpcClient.from_config_dict(config_dict, chain_index=Chain.ETH_GOERLI)
+        self.__rpc_cli = EthRpcClient.from_config_dict(config_dict, chain_index=Chain.ETH_MAIN)
 
     def ping(self) -> bool:
         return isinstance(self.__rpc_cli.chain_id, int)
