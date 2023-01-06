@@ -5,4 +5,4 @@ pycryptodome
 requests
 dataclasses-json
 prometheus-client
-git+https://github.com/bifrost-platform/solidity-contract-configs@230105
+git+https://github.com/bifrost-platform/solidity-contract-configs@230106
