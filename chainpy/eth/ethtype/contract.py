@@ -1,3 +1,4 @@
+from typing import Union
 import json
 
 import eth_abi
@@ -5,8 +6,8 @@ from dataclasses_json import dataclass_json, LetterCase
 from dataclasses import dataclass
 from typing import Optional, List, Dict
 
-from .hexbytes import EthAddress
-from .utils import *
+from .hexbytes import EthAddress, EthHexBytes, EthHashBytes
+from .utils import keccak_hash
 from .exceptions import *
 
 
