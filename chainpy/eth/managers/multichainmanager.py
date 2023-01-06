@@ -25,7 +25,7 @@ class MultiChainManager:
         # config for each chain
         self.__chain_managers = dict()
         for chain_index in self.__supported_chains:
-            chain_config = multichain_config[chain_index.name.lower()]
+            chain_config = multichain_config[chain_index.name.upper()]
             chain_manager = EthChainManager.from_config_dict(chain_config, chain_index=chain_index)
             if private_key is not None and private_key != "":
                 chain_manager.set_account(private_key)
@@ -143,7 +143,7 @@ class TestTransaction(unittest.TestCase):
         self.serialized_tx = "0xf90153f9015082bfc082301f0186015d3ef7980183036e54947abd332cf88ca31725fffb21795f90583744535280b901246196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874ec0"
 
     def test_serialize_tx_from_rpc(self):
-        tx = self.cli.get_chain_manager_of(Chain.BIFROST).eth_get_transaction_by_hash(self.target_tx_hash)
+        tx = self.cli.get_chain_manager_of(Chain.BFC_TEST).eth_get_transaction_by_hash(self.target_tx_hash)
         self.assertEqual(tx.serialize(), self.serialized_tx)
 
     def test_serialize_tx_built(self):

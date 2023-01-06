@@ -1,5 +1,5 @@
 import json
-from typing import Union, List, Dict
+from typing import Union, Dict
 
 
 def to_list(targets: Union[str, list]) -> list:

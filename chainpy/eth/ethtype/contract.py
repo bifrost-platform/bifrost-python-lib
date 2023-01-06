@@ -5,7 +5,7 @@ from dataclasses_json import dataclass_json, LetterCase
 from dataclasses import dataclass
 from typing import Optional, List, Dict
 
-from .hexbytes import EthHashBytes, EthHexBytes, EthAddress
+from .hexbytes import EthAddress
 from .utils import *
 from .exceptions import *
 

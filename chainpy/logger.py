@@ -1,6 +1,6 @@
 import logging.handlers
 
-from chainpy.eth.ethtype.consts import Chain
+from bridgeconst.consts import Chain
 from chainpy.eth.ethtype.hexbytes import EthAddress
 
 

@@ -189,7 +189,7 @@ class EthChainManager(EthContractHandler):
         elif self.tx_type == 2:
             priority_fee_price = self.eth_get_priority_fee_per_gas()
             base_fee_price = self.eth_get_next_base_fee()
-            if self.chain_index == Chain.BIFROST:  # TODO bifrost specific config
+            if self.chain_index == Chain.BFC_TEST:  # TODO bifrost specific config
                 base_fee_price = max(base_fee_price, 1000 * 10 ** 9)
         else:
             raise Exception("Not supported fee type")
@@ -289,7 +289,7 @@ class TestTransaction(unittest.TestCase):
         self.cli = EthChainManager.from_config_files(
             "../configs/entity.relayer.json",
             "../configs/entity.relayer.private.json",
-            chain_index=Chain.BIFROST
+            chain_index=Chain.BFC_TEST
         )
         self.target_tx_hash = EthHashBytes(0xfb6ceb412ae267643d45b28516565b1ab07f4d16ade200d7e432be892add1448)
         self.serialized_tx = "0xf90153f9015082bfc082301f0186015d3ef7980183036e54947abd332cf88ca31725fffb21795f90583744535280b901246196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874ec0"

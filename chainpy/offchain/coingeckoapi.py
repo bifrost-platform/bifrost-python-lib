@@ -1,10 +1,10 @@
 import unittest
-from typing import List, Union
+from typing import List
 
 from .utils import get_url_from_private_config
 from ..eth.ethtype.amount import EthAmount
 from ..offchain.coingeckoconst import supported_symbols
-from ..offchain.priceapiabc import PriceApiABC, Market, to_list, Symbol, MarketData, QueryId
+from ..offchain.priceapiabc import PriceApiABC, Market, Symbol, MarketData, QueryId
 
 
 class CoingeckoApi(PriceApiABC):

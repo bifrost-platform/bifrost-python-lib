@@ -17,7 +17,7 @@ from chainpy.eth.ethtype.amount import EthAmount
 from chainpy.eth.ethtype.dataclassmeta import EthHashBytesMeta, IntegerMeta, EthHexBytesMeta, EthAddrMeta
 from chainpy.eth.ethtype.exceptions import EthTypeError
 from chainpy.eth.ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
-from chainpy.eth.ethtype.utils import is_hex
+from chainpy.eth.ethtype.utils import is_hex, keccak_hash
 
 dynamic_unsigned_transaction_fields = (
     ('chainId', big_endian_int),
