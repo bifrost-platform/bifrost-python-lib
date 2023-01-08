@@ -64,7 +64,7 @@ class EthLog:
     data: EthHexBytes = field(metadata=EthHexBytesMeta)
     log_index: int = field(metadata=IntegerMeta)
     removed: bool
-    topics: list = field(metadata=EthHashBytesListMeta)
+    topics: List[EthHashBytes] = field(metadata=EthHashBytesListMeta)
     transaction_hash: EthHashBytes = field(metadata=EthHashBytesMeta)
     transaction_index: int = field(metadata=IntegerMeta)
 
