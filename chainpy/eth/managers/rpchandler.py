@@ -71,9 +71,12 @@ class EthRpcClient:
             if rpc_server_downtime_allow_sec is None else rpc_server_downtime_allow_sec
         self.__transaction_commit_multiplier = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER \
             if transaction_commit_multiplier is None else transaction_commit_multiplier
+
         # check connection
-        resp = self.send_request("eth_chainId", [])
-        self.__chain_id = int(resp, 16)
+        self.__chain_id: int = None
+        if self.__url_with_access_key:
+            resp = self.send_request("eth_chainId", [])
+            self.__chain_id = int(resp, 16)
 
     @classmethod
     def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: Chain = None):
