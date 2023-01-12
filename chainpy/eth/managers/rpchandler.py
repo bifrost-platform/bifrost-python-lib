@@ -119,7 +119,7 @@ class EthRpcClient:
 
     @property
     def tx_commit_time_sec(self) -> int:
-        return self.__block_aging_period * self.__transaction_commit_multiplier
+        return self.__block_aging_period * self.__block_period_sec * self.__transaction_commit_multiplier
 
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
         if cnt > RPC_RETRY_MAX_RETRY_NUM:
