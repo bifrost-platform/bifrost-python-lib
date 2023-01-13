@@ -96,12 +96,11 @@ class EthTransaction:
     def __post_init__(self):
         if EthHashBytes.default() == self.block_hash:
             self.type = -1
-        elif self.access_list is None:
+
+        if self.access_list == []:
             self.type = 0
-        elif self.max_fee_per_gas is None:
-            self.type = 1
         else:
-            self.type = 2
+            self.type = 1 if self.max_fee_per_gas == 0 and self.max_priority_fee_per_gas == 0 else 2
 
     @classmethod
     def init(cls,
@@ -131,7 +130,7 @@ class EthTransaction:
 
     def set_gas_price(self, gas_price: int):
         """ set fee parameters for type0 or type1 transaction """
-        self.type = 0
+        self.type = self.type if self.type == 1 else 0
         self.gas_price = gas_price
         return self
 
@@ -143,7 +142,9 @@ class EthTransaction:
         return self
 
     def set_access_list(self, access_list: list):
-        self.type = 1
+        if access_list == []:
+            return self
+        self.type = max(self.type, 1)
         self.access_list = access_list
         return self
 
@@ -224,16 +225,17 @@ class EthTransaction:
 
         value = hex(self.value) if self.value is not None else "0x00"
         transaction = {
+            "chainId": hex(self.chain_id) if not encoded else self.chain_id,
             "to": self.to.hex().lower() if not encoded else self.to.bytes(),
             "value": value if not encoded else self.value,
             "nonce": hex(self.nonce) if not encoded else self.nonce,
             "gas": hex(self.gas) if not encoded else self.gas,
             "data": self.input.hex().lower() if not encoded else self.input.bytes()
         }
-        if self.type == 0:
+        if self.type < 2:
             transaction["gasPrice"] = hex(self.gas_price) if not encoded else self.gas_price
         if self.type > 0:
-            transaction["chainId"] = hex(self.chain_id) if not encoded else self.chain_id
+
             transaction["accessList"] = self.access_list
         if self.type == 2:
             transaction["maxFeePerGas"] = hex(self.max_fee_per_gas) if not encoded else self.max_fee_per_gas
