@@ -22,7 +22,7 @@ class DetectedEvent:
 
     @classmethod
     def from_dict(cls, detected_event_dict: dict):
-        chain_index = eval("Chain." + detected_event_dict["chain_name"].upper())
+        chain_index = Chain.from_name(detected_event_dict["chain_name"].upper())
         log_obj = EthLog.from_dict(detected_event_dict["log"])
         return cls(chain_index, detected_event_dict["contract_name"], detected_event_dict["event_name"], log_obj)
 

@@ -76,7 +76,7 @@ class EthUnknownSpecError(Exception):
 
 
 class EthAlreadyExistError(Exception):
-    def __init__(self, key: str = None, value = None):
+    def __init__(self, key: str = None, value: Any = None):
         msg = "The key({}) or the value({}) already exists".format(key, value)
         super().__init__(msg)
 
