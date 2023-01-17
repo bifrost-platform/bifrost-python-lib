@@ -17,6 +17,9 @@ from ..managers.ethchainmanager import EthChainManager
 class MultiChainManager:
     def __init__(self, multichain_config: dict):
         entity_config = multichain_config["entity"]
+        self.__role = multichain_config["role"].capitalize()
+        self.__account_name = multichain_config["role"].get("account_name")
+
         private_key = entity_config.get("secret_hex")
         if private_key is not None and private_key != "":
             self.__active_account = EthAccount.from_secret(private_key)
@@ -54,6 +57,14 @@ class MultiChainManager:
             chain_manager = self.get_chain_manager_of(chain_index)
             chain_manager.set_account(private_key)
         self.__active_account = EthAccount.from_secret(private_key)
+
+    @property
+    def role(self) -> str:
+        return self.__role
+
+    @property
+    def account_name(self) -> Optional[str]:
+        return self.__account_name
 
     @property
     def active_account(self) -> EthAccount:
