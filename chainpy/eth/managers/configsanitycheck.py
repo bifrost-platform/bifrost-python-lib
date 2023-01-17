@@ -214,7 +214,16 @@ class EntityConfigChecker:
     @staticmethod
     def check_config(config: dict):
         check_valid_type(config, "role", str, required=True, default_allow=False)
+        roles = ["User", "Relayer", "Fast-relayer", "Slow-relayer"]
+        if config["role"].capitalize() not in roles:
+            raise ConfigCheckerError("Invalid entity's role: {}".format(config["role"]))
+
+        if config["role"] == "slow-relayer":
+            check_valid_type(config, "slow_relayer_delay_sec", int, required=True, default_allow=False)
+        else:
+            check_valid_type(config, "slow_relayer_delay_sec", int, required=False, default_allow=True)
         delete_key_safe(config, "role")
+        delete_key_safe(config, "slow_relayer_delay_sec")
 
         check_valid_type(config, "account_name", str, required=False, default_allow=True)
         delete_key_safe(config, "account_name")
@@ -288,7 +297,7 @@ class TestConfigChecker(unittest.TestCase):
                     }
                 }
             },
-             "BFC_TEST": {
+            "BFC_TEST": {
                 "chain_name": "BFC_TEST",
                 "block_period_sec": 3,
                 "url_with_access_key": "a",
@@ -425,6 +434,7 @@ class TestConfigChecker(unittest.TestCase):
             "entity": {
                 "role": "slow-relayer",
                 "account_name": "relayer-launched-on-console",
+                "slow_relayer_delay_sec": 180,
                 "secret_hex": "",
                 "supporting_chains": [
                     "BFC_TEST",
