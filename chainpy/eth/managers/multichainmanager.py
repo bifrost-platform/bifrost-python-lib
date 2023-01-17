@@ -65,9 +65,9 @@ class MultiChainManager:
     @role.setter
     def role(self, role: str):
         capitalized_role = role.capitalize()
-        if role not in ["User", "Fast-relayer", "Slow-relayer", "Relayer"]:
+        if capitalized_role not in ["User", "Fast-relayer", "Slow-relayer", "Relayer"]:
             raise Exception("Invalid role: {}".format(role))
-        self.__role = role
+        self.__role = capitalized_role
 
     @property
     def account_name(self) -> Optional[str]:
