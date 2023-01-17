@@ -6,7 +6,7 @@ from chainpy.eth.ethtype.hexbytes import EthAddress
 
 class LoggerSetting:
     LEVEL = logging.DEBUG
-    FILENAME = "protocol.log"
+    FILENAME = None
     MAX_BYTES = 10 * 1024 * 1024
     BACKUP_COUNT = 10
     FORMAT = "%(asctime)s [%(name)-10s] %(message)s"
@@ -39,18 +39,17 @@ def Logger(
     # define formatter and handler
     formatter = logging.Formatter(_format)
     stream_handler = logging.StreamHandler()
-    file_handler = logging.handlers.RotatingFileHandler(
-        filename=file_path,
-        maxBytes=max_bytes,
-        backupCount=LoggerSetting.BACKUP_COUNT
-    )
-
-    # prepare handlers (both stdout and file)
     stream_handler.setFormatter(formatter)
-    file_handler.setFormatter(formatter)
-
-    # add handlers to logger
     logger.addHandler(stream_handler)
-    logger.addHandler(file_handler)
+
+    if file_path is not None:
+        file_handler = logging.handlers.RotatingFileHandler(
+            filename=file_path,
+            maxBytes=max_bytes,
+            backupCount=LoggerSetting.BACKUP_COUNT
+        )
+
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     return logger
