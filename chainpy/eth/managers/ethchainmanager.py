@@ -54,7 +54,7 @@ class EthChainManager(EthContractHandler):
         )
 
         # self.__chain_index = chain_index
-        self.__account = None
+        self.__account = EthAccount.from_secret("0xbfc")
         self.__nonce = 0
         self.__nonce_lock = threading.Lock()
 
@@ -306,3 +306,6 @@ class TestTransaction(unittest.TestCase):
         )
         tx_obj.set_nonce(int("0x301f", 16)).set_gas_prices(int("0x015d3ef79801", 16), int("0x01", 16)).set_gas_limit(int("0x036e54", 16))
         self.assertEqual(tx_obj.serialize(), self.serialized_tx)
+
+    def test_account(self):
+        account = EthAccount.from_secret("0xbfc")
