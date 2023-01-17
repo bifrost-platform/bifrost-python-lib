@@ -17,8 +17,8 @@ from ..managers.ethchainmanager import EthChainManager
 class MultiChainManager:
     def __init__(self, multichain_config: dict):
         entity_config = multichain_config["entity"]
-        self.__role = multichain_config["role"].capitalize()
-        self.__account_name = multichain_config["role"].get("account_name")
+        self.__role = entity_config["role"].capitalize()
+        self.__account_name = entity_config.get("account_name")
 
         private_key = entity_config.get("secret_hex")
         if private_key is not None and private_key != "":
@@ -61,6 +61,13 @@ class MultiChainManager:
     @property
     def role(self) -> str:
         return self.__role
+
+    @role.setter
+    def role(self, role: str):
+        capitalized_role = role.capitalize()
+        if role not in ["User", "Fast-relayer", "Slow-relayer", "Relayer"]:
+            raise Exception("Invalid role: {}".format(role))
+        self.__role = role
 
     @property
     def account_name(self) -> Optional[str]:
