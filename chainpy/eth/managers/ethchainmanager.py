@@ -189,7 +189,8 @@ class EthChainManager(EthContractHandler):
         elif self.tx_type == 2:
             priority_fee_price = self.eth_get_priority_fee_per_gas()
             base_fee_price = self.eth_get_next_base_fee()
-            if self.chain_index == Chain.BFC_TEST:  # TODO bifrost specific config
+            # TODO bifrost specific config
+            if self.chain_index == Chain.BFC_TEST or self.chain_index == Chain.BFC_MAIN:
                 base_fee_price = max(base_fee_price, 1000 * 10 ** 9)
         else:
             raise Exception("Not supported fee type")
