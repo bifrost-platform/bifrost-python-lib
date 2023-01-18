@@ -9,7 +9,7 @@ from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 
 from .eventobj import DetectedEvent
 from .rpchandler import EthRpcClient, DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, \
-    DEFAULT_BLOCK_AGING_BLOCKS, DEFAULT_RPC_DOWN_ALLOW_SECS, DEFAULT_RPC_COMMIT_TIME_MULTIPLIER
+    DEFAULT_BLOCK_AGING_BLOCKS, DEFAULT_RPC_DOWN_ALLOW_SECS, DEFAULT_RPC_TX_BLOCK_DELAY
 from ..ethtype.transaction import EthTransaction
 
 
@@ -28,7 +28,7 @@ class EthContractHandler(EthRpcClient):
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
-            transaction_commit_multiplier: int = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER,
+            transaction_commit_multiplier: int = DEFAULT_RPC_TX_BLOCK_DELAY,
             events: List[dict] = None,
             latest_height: int = DEFAULT_LATEST_HEIGHT,
             max_log_num: int = DEFAULT_MAX_LOG_NUM

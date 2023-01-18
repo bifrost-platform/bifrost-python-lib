@@ -23,7 +23,7 @@ DEFAULT_RECEIPT_MAX_RETRY: int = 10
 DEFAULT_BLOCK_PERIOD_SECS: int = 3
 DEFAULT_BLOCK_AGING_BLOCKS: int = 1
 DEFAULT_RPC_DOWN_ALLOW_SECS: int = 180
-DEFAULT_RPC_COMMIT_TIME_MULTIPLIER: int = 2
+DEFAULT_RPC_TX_BLOCK_DELAY: int = 2
 
 
 def _reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
@@ -60,7 +60,7 @@ class EthRpcClient:
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
-            transaction_commit_multiplier: int = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER
+            transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY
     ):
         self._chain_index = chain_index
         self.__url_with_access_key = url_with_access_key
@@ -69,11 +69,11 @@ class EthRpcClient:
         self.__block_aging_period = DEFAULT_BLOCK_AGING_BLOCKS if block_aging_period is None else block_aging_period
         self.__rpc_server_downtime_allow_sec = DEFAULT_RPC_DOWN_ALLOW_SECS \
             if rpc_server_downtime_allow_sec is None else rpc_server_downtime_allow_sec
-        self.__transaction_commit_multiplier = DEFAULT_RPC_COMMIT_TIME_MULTIPLIER \
-            if transaction_commit_multiplier is None else transaction_commit_multiplier
+        self.__transaction_block_delay = DEFAULT_RPC_TX_BLOCK_DELAY \
+            if transaction_block_delay is None else transaction_block_delay
 
         # check connection
-        self.__chain_id: int = None
+        self.__chain_id: Optional[int] = None
         if self.__url_with_access_key:
             resp = self.send_request("eth_chainId", [])
             self.__chain_id = int(resp, 16)
@@ -119,7 +119,7 @@ class EthRpcClient:
 
     @property
     def tx_commit_time_sec(self) -> int:
-        return self.__block_aging_period * self.__block_period_sec * self.__transaction_commit_multiplier
+        return self.__block_period_sec * (self.__transaction_block_delay + self.__block_aging_period)
 
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
         if cnt > RPC_RETRY_MAX_RETRY_NUM:
