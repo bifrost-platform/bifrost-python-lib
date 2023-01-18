@@ -88,7 +88,7 @@ class ChainConfigChecker:
         check_valid_type(chain_config, "bootstrap_latest_height", expected_type=int)
         delete_key_safe(chain_config, "bootstrap_latest_height")
         check_valid_type(chain_config, "transaction_block_delay", expected_type=int, default_allow=False)
-        delete_key_safe(chain_config, "transaction_commit_multiplier")
+        delete_key_safe(chain_config, "transaction_block_delay")
         check_valid_type(chain_config, "receipt_max_try", expected_type=int, default_allow=False)
         delete_key_safe(chain_config, "receipt_max_try")
         check_valid_type(chain_config, "max_log_num", expected_type=int, default_allow=False)
