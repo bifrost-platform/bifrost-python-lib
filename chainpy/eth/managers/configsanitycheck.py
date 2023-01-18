@@ -87,7 +87,7 @@ class ChainConfigChecker:
 
         check_valid_type(chain_config, "bootstrap_latest_height", expected_type=int)
         delete_key_safe(chain_config, "bootstrap_latest_height")
-        check_valid_type(chain_config, "transaction_commit_multiplier", expected_type=int, default_allow=False)
+        check_valid_type(chain_config, "transaction_block_delay", expected_type=int, default_allow=False)
         delete_key_safe(chain_config, "transaction_commit_multiplier")
         check_valid_type(chain_config, "receipt_max_try", expected_type=int, default_allow=False)
         delete_key_safe(chain_config, "receipt_max_try")
@@ -303,7 +303,7 @@ class TestConfigChecker(unittest.TestCase):
                 "url_with_access_key": "a",
                 "bootstrap_latest_height": 2883,
                 "block_aging_period": 2,
-                "transaction_commit_multiplier": 2,
+                "transaction_block_delay": 5,
                 "receipt_max_try": 20,
                 "max_log_num": 1000,
                 "rpc_server_downtime_allow_sec": 180,
@@ -350,7 +350,7 @@ class TestConfigChecker(unittest.TestCase):
                 "url_with_access_key": "a",
                 "bootstrap_latest_height": 7749286,
                 "block_aging_period": 2,
-                "transaction_commit_multiplier": 2,
+                "transaction_block_delay": 5,
                 "receipt_max_try": 20,
                 "max_log_num": 1000,
                 "rpc_server_downtime_allow_sec": 180,
@@ -381,7 +381,7 @@ class TestConfigChecker(unittest.TestCase):
                 "url_with_access_key": "a",
                 "bootstrap_latest_height": 23601374,
                 "block_aging_period": 5,
-                "transaction_commit_multiplier": 2,
+                "transaction_block_delay": 5,
                 "receipt_max_try": 20,
                 "max_log_num": 1000,
                 "rpc_server_downtime_allow_sec": 180,
@@ -409,7 +409,7 @@ class TestConfigChecker(unittest.TestCase):
                 "url_with_access_key": "a",
                 "bootstrap_latest_height": 30814949,
                 "block_aging_period": 3,
-                "transaction_commit_multiplier": 2,
+                "transaction_block_delay": 5,
                 "receipt_max_try": 20,
                 "max_log_num": 1000,
                 "rpc_server_downtime_allow_sec": 180,
