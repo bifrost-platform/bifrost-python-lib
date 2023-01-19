@@ -169,7 +169,7 @@ def eth_amount_weighted_sum(amounts: List[EthAmount], weights: Union[List[float]
     total_weight = eth_amount_sum(weight_amounts)
 
     if total_weight == EthAmount.zero():
-        return EthAmount.zero()
+        return eth_amount_avg(amounts)
 
     weighted_sum = EthAmount("0x00")
     for i in range(len(amounts)):

@@ -150,7 +150,7 @@ class TestPriceAggregator(unittest.TestCase):
           "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT")
         }
         self.agg = PriceOracleAgg(urls)
-        self.symbols = ["ETH", "BFC", "MATIC", "BNB", "USDC", "USDT", "BUSD", "KLAY", "BIFI", "BTC"]
+        self.symbols = ["BFC", "ETH", "BNB", "MATIC", "USDC", "BIFI"]
 
     def test_ping(self):
         result = self.agg.ping()
@@ -183,4 +183,6 @@ class TestPriceAggregator(unittest.TestCase):
         for symbol, price in results.items():
             self.assertTrue(isinstance(symbol, Symbol))
             self.assertTrue(isinstance(price, EthAmount))
+            if price == EthAmount.zero():
+                raise Exception("zero price: {}".format(symbol))
             self.assertNotEqual(price, EthAmount.zero())

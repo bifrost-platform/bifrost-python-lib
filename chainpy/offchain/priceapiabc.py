@@ -6,9 +6,7 @@ import requests
 from .utils import to_list
 from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_avg
 
-AnchorSym, Symbol, QueryId, Market = str, str, str, dict
-MarketData = Dict[Symbol, Dict[str, EthAmount]]
-MergedMargetData = Dict[Symbol, List[Dict[str, EthAmount]]]
+Symbol, QueryId, Market = str, str, dict
 Prices = Dict[Symbol, EthAmount]
 
 
@@ -54,6 +52,8 @@ class PricesVolumes:
         self._volumes.append(volume)
 
     def averaged_price(self) -> EthAmount:
+        if len(self._prices) == 0:
+            raise Exception("No price: {}".format(self._symbol))
         return eth_amount_avg(self._prices)
 
     def volume_weighted_price(self) -> EthAmount:

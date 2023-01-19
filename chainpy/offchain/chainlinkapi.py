@@ -38,9 +38,9 @@ class ChainlinkApi(PriceApiABC):
             if contract_address == "0x0000000000000000000000000000000000000000":
                 raise Exception("Not supported symbol (zero address): {}".format(symbol))
             result = self.__rpc_cli.eth_call({"to": contract_address, "data": "0xfeaf968c"})
-            price = EthAmount(int.from_bytes(result[32:64], byteorder="big"), 10)
+            price = EthAmount(int.from_bytes(result[32:64], byteorder="big"), 8)
             if ret.get(symbol) is not None:
-                ret[symbol].append(price)
+                ret[symbol].append(price, EthAmount.zero())
             else:
                 ret[symbol] = PriceVolume(symbol, price)
         return ret
