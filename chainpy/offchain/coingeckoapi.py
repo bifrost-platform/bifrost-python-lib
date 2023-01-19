@@ -1,10 +1,9 @@
 import unittest
-from typing import List
+from typing import List, Dict
 
-from .utils import get_url_from_private_config
 from ..eth.ethtype.amount import EthAmount
-from ..offchain.coingeckoconst import supported_symbols
-from ..offchain.priceapiabc import PriceApiABC, Market, Symbol, MarketData, QueryId
+from ..offchain.coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
+from ..offchain.priceapiabc import PriceApiABC, Market, Symbol, QueryId, PriceVolume
 
 
 class CoingeckoApi(PriceApiABC):
@@ -18,11 +17,11 @@ class CoingeckoApi(PriceApiABC):
 
     @staticmethod
     def supported_symbols() -> List[Symbol]:
-        return list(supported_symbols.keys())
+        return list(COINGECKO_SUPPORTING_SYMBOLS.keys())
 
     @staticmethod
     def _get_query_id_by_symbol(symbol: Symbol) -> QueryId:
-        return supported_symbols[symbol]
+        return COINGECKO_SUPPORTING_SYMBOLS[symbol]
 
     @staticmethod
     def _get_price_in_market(market: Market) -> EthAmount:
@@ -38,7 +37,7 @@ class CoingeckoApi(PriceApiABC):
             volume = volume / 1.0  # casting to float
         return EthAmount(volume)
 
-    def _fetch_price_and_volume(self, symbols: List[Symbol]) -> MarketData:
+    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
         # get not cached coin id
         market_ids = [self._get_query_id_by_symbol(symbol) for symbol in symbols]
         req_ids = ",".join(market_ids)
@@ -48,41 +47,44 @@ class CoingeckoApi(PriceApiABC):
         markets = self._request(api_url, {"ids": req_ids, "vs_currency": "usd"})
         for i, market in enumerate(markets):
             # find key by value on dictionary
-            symbol = list(supported_symbols.keys())[list(supported_symbols.values()).index(market["id"])]
+            supporting_symbols = list(COINGECKO_SUPPORTING_SYMBOLS.keys())
+            symbol = supporting_symbols[list(COINGECKO_SUPPORTING_SYMBOLS.values()).index(market["id"])]
             price = self._get_price_in_market(market)
             volume = self._get_volume_in_market(market)
-            ret[symbol] = {"price": price, "volume": volume}
+            if ret.get(symbol) is not None:
+                ret[symbol].append(price, volume)
+            else:
+                ret[symbol] = PriceVolume(symbol, price, volume)
         return ret
 
 
 class TestCoinGeckoApi(unittest.TestCase):
     def setUp(self) -> None:
-        url = get_url_from_private_config("Coingecko")
-        self.api = CoingeckoApi(url)
-        self.symbols = ["ETH", "BNB", "MATIC", "KLAY", "BFC", "USDT", "USDC", "BIFI"]
+        # Open api url
+        self.api = CoingeckoApi("https://api.coingecko.com/api/v3/")
+        self.symbols = ["BFC", "ETH", "BNB", "MATIC", "USDC", "BIFI"]
 
     def test_ping(self):
         result = self.api.ping()
         self.assertTrue(result)
 
-    def test_coin_list(self):
+    def test_supporting_symbol(self):
         symbols = self.api.supported_symbols()
         self.assertEqual(type(symbols), list)
-
-    def test_price(self):
-        prices = self.api.get_current_price(self.symbols)
-        for symbol, price in prices.items():
-            self.assertTrue(symbol in self.symbols)
-            self.assertTrue(isinstance(price["price"], EthAmount))
+        self.assertEqual(symbols, list(COINGECKO_SUPPORTING_SYMBOLS.keys()))
 
     def test_price_and_volumes(self):
-        prices_and_volume_dict = self.api.get_current_price_and_volume(self.symbols)
-        for symbol, price_and_volume in prices_and_volume_dict.items():
+        symbol_to_pv = self.api.get_current_prices_with_volumes(self.symbols)
+        for symbol, pv in symbol_to_pv.items():
             self.assertTrue(symbol in self.symbols)
+            self.assertTrue(isinstance(pv.price(), EthAmount))
+            self.assertNotEqual(pv.price(), EthAmount.zero())
+            self.assertTrue(isinstance(pv.volume(), EthAmount))
+            self.assertNotEqual(pv.volume(), EthAmount.zero())
 
-            price = price_and_volume["price"]
+    def test_current_prices(self):
+        prices_dict = self.api.get_current_prices(self.symbols)
+        for symbol, price in prices_dict.items():
+            self.assertTrue(symbol in self.symbols)
             self.assertTrue(isinstance(price, EthAmount))
             self.assertNotEqual(price, EthAmount.zero())
-
-            volume = price_and_volume["volume"]
-            self.assertTrue(isinstance(volume, EthAmount))

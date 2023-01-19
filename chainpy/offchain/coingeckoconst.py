@@ -1,4 +1,4 @@
-supported_symbols = {
+COINGECKO_SUPPORTING_SYMBOLS = {
     "1INCH": "1inch",
     "AAVE": "aave",
     "ADA": "cardano",

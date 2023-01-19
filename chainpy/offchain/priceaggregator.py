@@ -1,25 +1,30 @@
-import copy
+import os
 import unittest
 from enum import Enum
 from typing import List, Union, Dict, Optional, Callable
 
-from .priceapiabc import PriceApiABC, Symbol, MergedMargetData, Prices
-from .utils import to_list, get_urls_from_private_config
-from ..eth.ethtype.amount import eth_amount_avg, eth_amount_weighted_sum, EthAmount
+from dotenv import load_dotenv
+
+from .chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
+from .coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
+from .priceapiabc import PriceApiABC, Symbol, Prices, PricesVolumes
+from .upbitconst import UPBIT_SUPPORTING_SYMBOLS
+from .utils import to_list
+from ..eth.ethtype.amount import EthAmount
 from .chainlinkapi import ChainlinkApi
 from .coingeckoapi import CoingeckoApi
 from .upbitapi import UpbitApi
 
 
-class PriceSrcIndex(Enum):
+class PriceApiIdx(Enum):
     COINGECKO = 1
     UPBIT = 2
     CHAINLINK = 3
     BINANCE = 4
 
     @staticmethod
-    def from_name(name: str) -> Optional["PriceSrcIndex"]:
-        for idx in PriceSrcIndex:
+    def from_name(name: str) -> Optional["PriceApiIdx"]:
+        for idx in PriceApiIdx:
             if idx.name == name.upper():
                 return idx
         return None
@@ -39,15 +44,14 @@ class PriceSrcIndex(Enum):
 
 
 class PriceOracleAgg:
-    def __init__(self, source_names: list, url: dict):
-        self.apis: Dict[PriceSrcIndex, PriceApiABC] = dict()
+    def __init__(self, urls: dict):
+        self.apis: Dict[PriceApiIdx, PriceApiABC] = dict()
+        for name in urls.keys():
+            src_index = PriceApiIdx.from_name(name)
+            api = PriceApiIdx.api_selector(name)
+            self.apis[src_index] = api(urls[name])
 
-        for name in source_names:
-            src_index = PriceSrcIndex.from_name(name)
-            api = PriceSrcIndex.api_selector(name)
-            self.apis[src_index] = api(url[name])
-
-        self.__supported_symbols_each: Dict[PriceSrcIndex, List[Symbol]] = {}
+        self.__supported_symbols_each: Dict[PriceApiIdx, List[Symbol]] = {}
         self.__supported_symbol_union: List[Symbol] = []
         for idx, api in self.apis.items():
             supported_symbols = api.supported_symbols()
@@ -62,7 +66,7 @@ class PriceOracleAgg:
         return True
 
     @property
-    def supported_api_indices(self) -> List[PriceSrcIndex]:
+    def supported_api_indices(self) -> List[PriceApiIdx]:
         return list(self.apis.keys())
 
     @property
@@ -77,29 +81,14 @@ class PriceOracleAgg:
     def supported_symbols_each(self):
         return self.__supported_symbols_each
 
-    def get_apis_supporting_symbol(self, symbol: Symbol) -> List[PriceSrcIndex]:
+    def get_apis_supporting_symbol(self, symbol: Symbol) -> List[PriceApiIdx]:
         apis = list()
         for idx, symbols in self.supported_symbols_each.items():
             if symbol in symbols:
                 apis.append(idx)
         return apis
 
-    @staticmethod
-    def _merge_price_table(src_table: dict, dst_table: dict) -> Dict[Symbol, List[Dict[str, EthAmount]]]:
-        src_clone = copy.deepcopy(src_table)
-        for symbol in dst_table.keys():
-            src_item = src_table.get(symbol)
-            if src_item is None:
-                src_clone[symbol] = [dst_table[symbol]]
-            elif isinstance(src_item, dict):
-                src_clone[symbol] = [src_item, dst_table[symbol]]
-            elif isinstance(src_item, list):
-                src_clone[symbol].append(dst_table[symbol])
-            else:
-                raise Exception("error")
-        return src_clone
-
-    def fetch_prices_and_volumes(self, symbols: Union[Symbol, List[Symbol]]) -> MergedMargetData:
+    def fetch_prices_and_volumes(self, symbols: Union[Symbol, List[Symbol]]) -> Dict[Symbol, PricesVolumes]:
         # ensure symbols is list
         symbols = to_list(symbols)
         symbols = [symbol.upper() for symbol in symbols]
@@ -112,91 +101,86 @@ class PriceOracleAgg:
                     self.supported_symbols
                 ))
 
-        # key: api index, value: symbols supported by the api
-        classified_symbols_by_apis: Dict[PriceSrcIndex, List[Symbol]] = {}
-        for idx, api in self.apis.items():
-            classified_symbols_by_apis[idx] = list(set(api.supported_symbols()).intersection(symbols))
+        # Symbols supported by each api
+        api_to_symbols_map: Dict[PriceApiIdx, List[Symbol]] = {}
+        for api_idx, api in self.apis.items():
+            api_to_symbols_map[api_idx] = list(set(api.supported_symbols()).intersection(symbols))
 
-        # key: symbol, value: list of "PriceAndVolume"s from the api
-        price_and_volume_table = {}
-        for api_idx, api_symbols in classified_symbols_by_apis.items():
+        # pv: price and _volumes
+        symbol_to_prices_volumes: Dict[Symbol, PricesVolumes] = dict()
+        for symbol in symbols:
+            symbol_to_prices_volumes[symbol] = PricesVolumes.init(symbol)
+
+        for api_idx, supporting_symbols in api_to_symbols_map.items():
             try:
-                prices_and_volumes = self.apis[api_idx].get_current_price_and_volume(api_symbols)
+                symbol_to_pv_from_api = self.apis[api_idx].get_current_prices_with_volumes(supporting_symbols)
             except Exception as e:
                 print("[Err] Api Error: {}\n  - msg: {}".format(api_idx.name, e))
                 continue
 
-            price_and_volume_table = self._merge_price_table(price_and_volume_table, prices_and_volumes)
+            for symbol, pv in symbol_to_pv_from_api.items():
+                symbol_to_prices_volumes[symbol].append(pv.price(), pv.volume())
 
-        for symbol in symbols:
-            if price_and_volume_table.get(symbol) is None:
-                price_and_volume_table[symbol] = [{"price": EthAmount.zero(), "volume": EthAmount.zero()}]
-
-        return price_and_volume_table
-
-    def _rearrange_prices_and_volumes(self,
-                                      symbols: Union[Symbol, List[Symbol]]) \
-            -> (Dict[Symbol, List[EthAmount]], Dict[Symbol, List[EthAmount]]):
-        price_and_volume_table: MergedMargetData = self.fetch_prices_and_volumes(symbols)
-
-        symbol_prices: Dict[Symbol, List[EthAmount]] = {}
-        symbol_volumes: Dict[Symbol, List[EthAmount]] = {}
-        for symbol, prices_and_volumes in price_and_volume_table.items():
-            if symbol_prices.get(symbol) is None:
-                symbol_prices[symbol] = []
-
-            if symbol_volumes.get(symbol) is None:
-                symbol_volumes[symbol] = []
-
-            for price_and_volume in prices_and_volumes:
-                symbol_prices[symbol].append(price_and_volume["price"])
-                symbol_volumes[symbol].append(price_and_volume["volume"])
-        return symbol_prices, symbol_volumes
-
-    def get_current_weighted_price(self, symbols: Union[Symbol, List[Symbol]]) -> Prices:
-        symbol_prices, symbol_volumes = self._rearrange_prices_and_volumes(symbols)
-
-        symbol_price: Prices = {}
-        for symbol in symbols:
-            symbol_price[symbol] = eth_amount_weighted_sum(symbol_prices[symbol], symbol_volumes[symbol])
-        return symbol_price
+        return symbol_to_prices_volumes
 
     def get_current_averaged_price(self, symbols: Union[Symbol, List[Symbol]]) -> Prices:
-        symbol_prices, _ = self._rearrange_prices_and_volumes(symbols)
+        symbol_to_pv_list = self.fetch_prices_and_volumes(symbols)
 
-        symbol_price: Prices = {}
+        symbol_to_price: Dict[Symbol, EthAmount] = {}
         for symbol in symbols:
-            symbol_price[symbol] = eth_amount_avg(symbol_prices[symbol])
-        return symbol_price
+            symbol_to_price[symbol] = symbol_to_pv_list[symbol].averaged_price()
+        return symbol_to_price
+
+    def get_current_weighted_price(self, symbols: Union[Symbol, List[Symbol]]) -> Prices:
+        symbol_to_pv_list = self.fetch_prices_and_volumes(symbols)
+
+        symbol_to_price: Dict[Symbol, EthAmount] = {}
+        for symbol in symbols:
+            symbol_to_price[symbol] = symbol_to_pv_list[symbol].volume_weighted_price()
+        return symbol_to_price
 
 
 class TestPriceAggregator(unittest.TestCase):
     def setUp(self) -> None:
-        urls = get_urls_from_private_config()
+        load_dotenv()
+
+        urls = {
+          "Coingecko": "https://api.coingecko.com/api/v3/",
+          "Upbit": "https://api.upbit.com/v1/",
+          "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT")
+        }
+        self.agg = PriceOracleAgg(urls)
         self.symbols = ["ETH", "BFC", "MATIC", "BNB", "USDC", "USDT", "BUSD", "KLAY", "BIFI", "BTC"]
-        self.source_names = ["Coingecko", "Upbit", "Chainlink"]
-        self.agg = PriceOracleAgg(self.source_names, urls)
 
-    def test_coin_list(self):
-        supported_symbols = self.agg.supported_symbols
-        self.assertEqual(type(supported_symbols), list)
+    def test_ping(self):
+        result = self.agg.ping()
+        self.assertTrue(result)
 
-    def test_get_current_price(self):
-        result = self.agg.fetch_prices_and_volumes(self.symbols)
-        print(result)
+    def test_supporting_symbol(self):
+        actual_supported_symbols = self.agg.supported_symbols
+        expected_supported_symbols = set(COINGECKO_SUPPORTING_SYMBOLS.keys()).\
+            union(set(UPBIT_SUPPORTING_SYMBOLS.keys())).\
+            union(set(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys()))
 
-    def test_get_current_weighted_price(self):
-        print()
-        prices = self.agg.get_current_weighted_price(self.symbols)
-        for key, result in prices.items():
-            print("{}-> price: {}".format(key, result))
+        self.assertEqual(type(actual_supported_symbols), list)
+        self.assertEqual(actual_supported_symbols, list(expected_supported_symbols))
+
+    def test_fetch_prices_and_volumes(self):
+        results = self.agg.fetch_prices_and_volumes(self.symbols)
+        for symbol, pv_list in results.items():
+            self.assertTrue(symbol in self.symbols)
+            self.assertTrue(isinstance(pv_list, PricesVolumes))
 
     def test_get_current_averaged_price(self):
         results = self.agg.get_current_averaged_price(self.symbols)
-        for key, result in results.items():
-            print("{}-> price: {}".format(key, result))
+        for symbol, price in results.items():
+            self.assertTrue(isinstance(symbol, Symbol))
+            self.assertTrue(isinstance(price, EthAmount))
+            self.assertNotEqual(price, EthAmount.zero())
 
-    # def test_stress(self):
-    #     for i in range(22):
-    #         results = self.agg.get_current_averaged_price(self.symbols)
-    #         print(results)
+    def test_get_current_weighted_price(self):
+        results = self.agg.get_current_weighted_price(self.symbols)
+        for symbol, price in results.items():
+            self.assertTrue(isinstance(symbol, Symbol))
+            self.assertTrue(isinstance(price, EthAmount))
+            self.assertNotEqual(price, EthAmount.zero())

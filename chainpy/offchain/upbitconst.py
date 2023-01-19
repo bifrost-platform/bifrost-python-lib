@@ -1,4 +1,4 @@
-supported_symbols = {
+UPBIT_SUPPORTING_SYMBOLS = {
     "1INCH": ["KRW", "BTC"],
     "AAVE": ["KRW", "BTC"],
     "ADA": ["KRW", "BTC", "USDT"],
@@ -31,7 +31,7 @@ supported_symbols = {
     "TRX": ["KRW", "BTC", "USDT"],
     "TUSD": ["BTC", "USDT"],
     "UNI": ["BTC"],
-    "USDT": [],
+    "USDT": ["USDT"],
     "VET": "vechain",
     "XLM": ["BTC", "KRW"],
     "XRP": ["KRW", "BTC", "USDT"],

@@ -82,7 +82,7 @@
 #         for coin_id, price_and_volume in prices_and_volume_dict.items():
 #             self.assertTrue(coin_id in ids)
 #             self.assertEqual(type(price_and_volume.price), EthAmount)
-#             self.assertEqual(type(price_and_volume.volume), EthAmount)
+#             self.assertEqual(type(price_and_volume._volumes), EthAmount)
 #
 #     def test_delete_cache(self):
 #         ids = ["BFC"]

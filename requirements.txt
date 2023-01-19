@@ -6,3 +6,4 @@ requests
 dataclasses-json
 prometheus-client
 git+https://github.com/bifrost-platform/solidity-contract-configs@230119
+python-dotenv

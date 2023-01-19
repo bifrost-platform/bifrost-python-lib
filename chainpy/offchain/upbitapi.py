@@ -1,12 +1,16 @@
 import unittest
-from typing import List
+from typing import List, Dict
 
-import requests.exceptions
-
-from .utils import get_url_from_private_config
-from .priceapiabc import PriceApiABC, Market, Symbol, QueryId, MarketData
-from .upbitconst import supported_symbols
+from .priceapiabc import PriceApiABC, Market, Symbol, QueryId, PriceVolume
+from .upbitconst import UPBIT_SUPPORTING_SYMBOLS
 from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_sum
+
+"""
+Upbit open api: https://docs.upbit.com/reference/
+
+- supporting market information
+    - https://docs.upbit.com/reference/%EB%A7%88%EC%BC%93-%EC%BD%94%EB%93%9C-%EC%A1%B0%ED%9A%8C
+"""
 
 
 class UpbitApi(PriceApiABC):
@@ -16,16 +20,18 @@ class UpbitApi(PriceApiABC):
         super().__init__(api_base_url, request_timeout_sec=request_timeout_sec)
 
     def ping(self) -> bool:
-        result = self.get_current_price_and_volume("BTC")
-        return isinstance(result["BTC"]["price"], EthAmount)
+        result = self.get_current_prices_with_volumes("BTC")
+        return "BTC" in result.keys() \
+               and isinstance(result["BTC"].price(), EthAmount) \
+               and isinstance(result["BTC"].volume(), EthAmount)
 
     @staticmethod
-    def is_anchor(sym: Symbol) -> bool:
-        return sym in UpbitApi.ANCHOR_COIN_IDS
+    def is_anchor(symbol: Symbol) -> bool:
+        return symbol in UpbitApi.ANCHOR_COIN_IDS
 
     @staticmethod
     def supported_symbols() -> List[Symbol]:
-        return list(supported_symbols.keys())
+        return list(UPBIT_SUPPORTING_SYMBOLS.keys())
 
     @staticmethod
     def get_query_id_of_anchor(anchor_sym: Symbol) -> List[QueryId]:
@@ -42,7 +48,7 @@ class UpbitApi(PriceApiABC):
         if UpbitApi.is_anchor(symbol):
             return UpbitApi.get_query_id_of_anchor(symbol)
         else:
-            anchors = supported_symbols[symbol]
+            anchors = UPBIT_SUPPORTING_SYMBOLS[symbol]
             return ["{}-{}".format(anchor, symbol) for anchor in anchors]
 
     @staticmethod
@@ -69,12 +75,15 @@ class UpbitApi(PriceApiABC):
         for symbol in symbols:
             query_ids += self._get_query_id_by_symbol(symbol)
 
-        anchors = sorted(list(set().union(*[supported_symbols[symbol] for symbol in symbols])))
+        anchors = sorted(list(set().union(*[UPBIT_SUPPORTING_SYMBOLS[symbol] for symbol in symbols])))
         for anchor in anchors:
             query_ids += self.get_query_id_of_anchor(anchor)
 
         query_ids = sorted(list(set(query_ids)))
         query_ids = ",".join(query_ids)
+
+        if query_ids == "":
+            return list(dict())
 
         api_url = "{}ticker".format(self.base_url)
         return self._request(api_url, {"markets": query_ids})
@@ -118,10 +127,10 @@ class UpbitApi(PriceApiABC):
         volumes = eth_amount_sum(volumes)
         return price, volumes
 
-    def _fetch_price_and_volume(self, symbols: List[Symbol]) -> MarketData:
+    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
         markets = self._fetch_markets_by_symbols(symbols)
 
-        anchors = sorted(list(set().union(*[supported_symbols[symbol] for symbol in symbols])))
+        anchors = sorted(list(set().union(*[UPBIT_SUPPORTING_SYMBOLS[symbol] for symbol in symbols])))
         anchor_prices = {}
         for anchor in anchors:
             anchor_prices[anchor] = UpbitApi._calc_anchor_price(anchor, markets)
@@ -129,51 +138,49 @@ class UpbitApi(PriceApiABC):
         ret = {}
         for symbol in symbols:
             if symbol == "USDT":
-                ret[symbol] = {"price": EthAmount(1.0), "volume": EthAmount(0.0)}
+                ret[symbol] = PriceVolume(symbol, anchor_prices[symbol])
                 continue
             target_markets = self._parse_market_by_symbol(symbol, markets)
             price, volume = self._calc_price_and_volume_in_usd(target_markets, anchor_prices)
-            ret[symbol] = {"price": price, "volume": volume}
-
+            if ret.get(symbol) is not None:
+                ret[symbol].append(price, volume)
+            else:
+                ret[symbol] = PriceVolume(symbol, price, volume)
         return ret
 
 
 class TestUpbitApi(unittest.TestCase):
     def setUp(self) -> None:
-        url = get_url_from_private_config("Upbit")
-        self.api = UpbitApi(url)
+        # Open api url
+        self.api = UpbitApi("https://api.upbit.com/v1/")
+
+        # Currently, The Upbit does not provide prices of BNB, USDC, BIFI
         self.symbols = ["ETH", "MATIC", "BFC", "USDT"]
 
     def test_ping(self):
         result = self.api.ping()
         self.assertTrue(result)
 
-    def test_coin_list(self):
-        coin_list = self.api.supported_symbols()
-        self.assertEqual(type(coin_list), list)
+    def test_supporting_symbol(self):
+        symbols = self.api.supported_symbols()
+        self.assertEqual(type(symbols), list)
+        self.assertEqual(symbols, list(UPBIT_SUPPORTING_SYMBOLS.keys()))
 
-    def test_price(self):
-        prices_dict = self.api.get_current_price(self.symbols)
+    def test_current_prices_with_volumes(self):
+        symbol_to_pv = self.api.get_current_prices_with_volumes(self.symbols)
+        for symbol, pv in symbol_to_pv.items():
+            self.assertTrue(symbol in self.symbols)
+            self.assertTrue(isinstance(pv.price(), EthAmount))
+            self.assertNotEqual(pv.price(), EthAmount.zero())
+            self.assertTrue(isinstance(pv.volume(), EthAmount))
+            if symbol == "USDT":
+                self.assertEqual(pv.volume(), EthAmount.zero())
+            else:
+                self.assertNotEqual(pv.volume(), EthAmount.zero())
+
+    def test_current_prices(self):
+        prices_dict = self.api.get_current_prices(self.symbols)
         for symbol, price in prices_dict.items():
             self.assertTrue(symbol in self.symbols)
-            self.assertTrue(isinstance(price["price"], EthAmount))
-
-    def test_price_and_volumes(self):
-        prices_and_volume_dict = self.api.get_current_price_and_volume(self.symbols)
-        for symbol, price_and_volume in prices_and_volume_dict.items():
-            self.assertTrue(symbol in self.symbols)
-
-            price = price_and_volume["price"]
             self.assertTrue(isinstance(price, EthAmount))
             self.assertNotEqual(price, EthAmount.zero())
-
-            volume = price_and_volume["volume"]
-            self.assertTrue(isinstance(volume, EthAmount))
-
-    def test_stress(self):
-        for i in range(22):
-            try:
-                results = self.api.get_current_price(self.symbols)
-                print(results)
-            except requests.exceptions.HTTPError as e:
-                print(e)
