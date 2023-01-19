@@ -80,9 +80,9 @@ class ChainConfigChecker:
         delete_key_safe(chain_config, "chain_name")
         check_valid_type(chain_config, "url_with_access_key", expected_type=str, required=True, default_allow=False)
         delete_key_safe(chain_config, "url_with_access_key")
-        check_valid_type(chain_config, "block_period_sec", expected_type=int, required=True, default_allow=False)
+        check_valid_type(chain_config, "block_period_sec", expected_type=int, required=False, default_allow=False)
         delete_key_safe(chain_config, "block_period_sec")
-        check_valid_type(chain_config, "block_aging_period", expected_type=int, required=True, default_allow=False)
+        check_valid_type(chain_config, "block_aging_period", expected_type=int, required=False, default_allow=False)
         delete_key_safe(chain_config, "block_aging_period")
 
         check_valid_type(chain_config, "bootstrap_latest_height", expected_type=int)
