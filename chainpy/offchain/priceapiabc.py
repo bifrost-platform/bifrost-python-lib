@@ -1,3 +1,4 @@
+from urllib import parse
 from abc import ABCMeta, abstractmethod
 from typing import List, Union, Dict, Tuple
 import json
@@ -66,18 +67,22 @@ class PriceApiABC(metaclass=ABCMeta):
         self._request_timeout_sec = request_timeout_sec
 
     def _request(self, api_url: str, params: dict = None, api_url_has_params=False):
-        if params:
-            api_url += '&' if api_url_has_params else '?'
-            for key, value in params.items():
-                if type(value) == bool:
-                    value = str(value).lower()
+        parse.urlencode()
 
-                api_url += "{0}={1}&".format(key, value)
-            api_url = api_url[:-1]
 
-        result = requests.get(api_url, timeout=self._request_timeout_sec)
-        result.raise_for_status()
-        return json.loads(result.content.decode("utf-8"))
+
+        # if params:
+        #     api_url += '&' if api_url_has_params else '?'
+        #     for key, value in params.items():
+        #         if type(value) == bool:
+        #             value = str(value).lower()
+        #
+        #         api_url += "{0}={1}&".format(key, str(value))
+        #     api_url = api_url[:-1]
+        #
+        # result = requests.get(api_url, timeout=self._request_timeout_sec)
+        # result.raise_for_status()
+        # return json.loads(result.content.decode("utf-8"))
 
     @property
     def base_url(self) -> str:

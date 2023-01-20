@@ -37,5 +37,6 @@ UPBIT_SUPPORTING_SYMBOLS = {
     "XRP": ["KRW", "BTC", "USDT"],
     "XTZ": ["BTC", "KRW"],
     "ZRX": ["KRW", "BTC", "USDT"],
-    "BFC": ["BTC"]
+    "BFC": ["BTC"],
+    "KRW": []  # dummy
 }

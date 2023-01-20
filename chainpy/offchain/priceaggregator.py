@@ -5,10 +5,10 @@ from typing import List, Union, Dict, Optional, Callable
 
 from dotenv import load_dotenv
 
-from .chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
-from .coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
+from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
+from chainpy.offchain.consts.coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
 from .priceapiabc import PriceApiABC, Symbol, Prices, PricesVolumes
-from .upbitconst import UPBIT_SUPPORTING_SYMBOLS
+from chainpy.offchain.consts.upbitconst import UPBIT_SUPPORTING_SYMBOLS
 from .utils import to_list
 from ..eth.ethtype.amount import EthAmount
 from .chainlinkapi import ChainlinkApi

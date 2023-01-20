@@ -2,7 +2,7 @@ import unittest
 from typing import List, Dict
 
 from ..eth.ethtype.amount import EthAmount
-from ..offchain.coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
+from chainpy.offchain.consts.coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
 from ..offchain.priceapiabc import PriceApiABC, Market, Symbol, QueryId, PriceVolume
 
 

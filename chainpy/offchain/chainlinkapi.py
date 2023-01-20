@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from dotenv import load_dotenv
 
-from .chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
+from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
 from .priceapiabc import PriceApiABC, Symbol, QueryId, PriceVolume
 from ..eth.managers.rpchandler import EthRpcClient
 from ..eth.ethtype.amount import EthAmount
