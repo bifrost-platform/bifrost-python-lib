@@ -2,8 +2,9 @@ import unittest
 from typing import Tuple, List
 
 from chainpy.eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_sum
-from chainpy.offchain.consts.coinmarketcapconst import COIN_MARKET_CAP_SUPPORTING_SYMBOLS
-from chainpy.offchain.priceapiabc import PriceApiABC, Symbol, Market, QueryId
+from chainpy.offchain.consts.gateioconst import GATE_IO_SYMBOL_TO_ANCHORS
+from chainpy.offchain.priceapiabc import PriceApiABC, Symbol, QueriedData, QueryId, AnchorSymbol, Price, Volume
+from chainpy.offchain.utils import restore_replace, replace_symbols
 
 
 class GateIoApi(PriceApiABC):
@@ -27,25 +28,26 @@ class GateIoApi(PriceApiABC):
 
     @staticmethod
     def supported_symbols() -> List[Symbol]:
-        supported_symbols = list(COIN_MARKET_CAP_SUPPORTING_SYMBOLS.keys())
-        supported_symbols.remove("BIFIF")
-        return supported_symbols
+        return list(restore_replace(GATE_IO_SYMBOL_TO_ANCHORS, GateIoApi.SYMBOL_REPLACE_MAP).keys())
+
+    @staticmethod
+    def _build_query_id(symbol: Symbol, anchor: AnchorSymbol):
+        return "{}_{}".format(symbol, anchor)
 
     @staticmethod
     def _get_query_ids(symbol: Symbol) -> List[QueryId]:
         if symbol == "USDT":
             return []
         else:
-            anchors = COIN_MARKET_CAP_SUPPORTING_SYMBOLS[symbol]
-            return ["{}_{}".format(symbol, anchor) for anchor in anchors]
+            anchors = GATE_IO_SYMBOL_TO_ANCHORS[symbol]
+            return [GateIoApi._build_query_id(symbol, anchor) for anchor in anchors]
 
-    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
-        if "BIFI" in symbols:
-            symbols[symbols.index("BIFI")] = "BIFIF"
+    def _fetch_asset_status_by_symbols(self, symbols: List[Symbol]) -> List[QueriedData]:
+        symbols = replace_symbols(symbols, self.__class__.SYMBOL_REPLACE_MAP)
 
         anchors = list()
         for symbol in symbols:
-            anchors += COIN_MARKET_CAP_SUPPORTING_SYMBOLS[symbol]
+            anchors += GATE_IO_SYMBOL_TO_ANCHORS[symbol]
 
         query_ids = []
         for symbol in symbols + anchors:
@@ -54,25 +56,25 @@ class GateIoApi(PriceApiABC):
         query_ids = sorted(list(set(query_ids)))  # remove duplication
 
         api_url = "{}spot/tickers".format(self.base_url)
-        markets = self._request(api_url)
+        queried_data = self._request(api_url)
 
-        ret_markets = list()
-        for market in markets:
-            if market["currency_pair"] in query_ids:
-                ret_markets.append(market)
-        return ret_markets
+        ret_queried_data = list()
+        for data in queried_data:
+            if data["currency_pair"] in query_ids:
+                ret_queried_data.append(data)
+        return ret_queried_data
 
     @staticmethod
-    def _calc_price_and_volume_in_usd(symbol: str, markets: list) -> Tuple[EthAmount, EthAmount]:
+    def _calc_price_and_volume_in_usd(symbol: Symbol, queried_data: List[QueriedData]) -> Tuple[Price, Volume]:
         if symbol == "USDT":
             return EthAmount("1.0", 18), EthAmount.zero()  # TODO usdt volume zero?
 
         else:
             market_prices, market_volumes = list(), list()
-            for anchor in COIN_MARKET_CAP_SUPPORTING_SYMBOLS[symbol]:
-                anchor_price, _ = GateIoApi._calc_price_and_volume_in_usd(anchor, markets)
-                target_price, target_volume = GateIoApi._parse_price_and_volume_in_markets(
-                    "{}_{}".format(symbol, anchor), markets)
+            for anchor in GATE_IO_SYMBOL_TO_ANCHORS[symbol]:
+                anchor_price, _ = GateIoApi._calc_price_and_volume_in_usd(anchor, queried_data)
+                target_price, target_volume = GateIoApi._parse_price_and_volume_from_queried_data(
+                    GateIoApi._build_query_id(symbol, anchor), queried_data)
                 market_prices.append(target_price * anchor_price)
                 market_volumes.append(target_volume * anchor_price)
 
@@ -80,10 +82,12 @@ class GateIoApi(PriceApiABC):
             return weighted_price, eth_amount_sum(market_volumes)
 
     @staticmethod
-    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
-        for market in markets:
-            if market["currency_pair"] == market_id:
-                price, volume = market["last"], market["quote_volume"]
+    def _parse_price_and_volume_from_queried_data(
+            query_id: QueryId, queried_data: List[QueriedData]
+    ) -> Tuple[Price, Volume]:
+        for data in queried_data:
+            if data["currency_pair"] == query_id:
+                price, volume = data["last"], data["quote_volume"]
                 if isinstance(price, int):
                     price = float(price)
                 if isinstance(volume, int):
@@ -104,8 +108,9 @@ class TestGateIoApi(unittest.TestCase):
 
     def test_supporting_symbol(self):
         symbols = self.api.supported_symbols()
-        expected_supporting_symbols = list(COIN_MARKET_CAP_SUPPORTING_SYMBOLS.keys())
-        expected_supporting_symbols.remove("BIFIF")
+        expected_supporting_symbols = list(
+            restore_replace(GATE_IO_SYMBOL_TO_ANCHORS, GateIoApi.SYMBOL_REPLACE_MAP).keys()
+        )
         self.assertEqual(type(symbols), list)
         self.assertEqual(symbols, expected_supporting_symbols)
 
