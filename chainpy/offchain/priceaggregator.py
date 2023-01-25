@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
 from chainpy.offchain.consts.coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
+from .binanceapi import BinanceApi
+from .consts.binanceconst import BINANCE_SUPPORTING_SYMBOLS
 from .priceapiabc import PriceApiABC, Symbol, Prices, PricesVolumes
 from chainpy.offchain.consts.upbitconst import UPBIT_SUPPORTING_SYMBOLS
 from .utils import to_list
@@ -38,8 +40,8 @@ class PriceApiIdx(Enum):
             return UpbitApi
         if normalized_name == "Chainlink":
             return ChainlinkApi
-        # if normalized_name == "Binance":
-        #     return BinanceApi
+        if normalized_name == "Binance":
+            return BinanceApi
         raise Exception("Not supported api name: {}".format(src_name))
 
 
@@ -145,9 +147,10 @@ class TestPriceAggregator(unittest.TestCase):
         load_dotenv()
 
         urls = {
-          "Coingecko": "https://api.coingecko.com/api/v3/",
-          "Upbit": "https://api.upbit.com/v1/",
-          "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT")
+            "Coingecko": "https://api.coingecko.com/api/v3/",
+            "Upbit": "https://api.upbit.com/v1/",
+            "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT"),
+            "Binance": "https://api.binance.com/api/v3/"
         }
         self.agg = PriceOracleAgg(urls)
         self.symbols = ["BFC", "ETH", "BNB", "MATIC", "USDC", "BIFI"]
@@ -157,13 +160,16 @@ class TestPriceAggregator(unittest.TestCase):
         self.assertTrue(result)
 
     def test_supporting_symbol(self):
-        actual_supported_symbols = self.agg.supported_symbols
-        expected_supported_symbols = set(COINGECKO_SUPPORTING_SYMBOLS.keys()).\
-            union(set(UPBIT_SUPPORTING_SYMBOLS.keys())).\
-            union(set(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys()))
+        actual_supported_symbols = sorted(self.agg.supported_symbols)
+        expected_supported_symbols = sorted(list(set(COINGECKO_SUPPORTING_SYMBOLS.keys()).
+                                                 union(set(UPBIT_SUPPORTING_SYMBOLS.keys())).
+                                                 union(set(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys())).
+                                                 union(set(BINANCE_SUPPORTING_SYMBOLS.keys()))
+                                                 )
+                                            )
 
         self.assertEqual(type(actual_supported_symbols), list)
-        self.assertEqual(actual_supported_symbols, list(expected_supported_symbols))
+        self.assertEqual(actual_supported_symbols, expected_supported_symbols)
 
     def test_fetch_prices_and_volumes(self):
         results = self.agg.fetch_prices_and_volumes(self.symbols)
