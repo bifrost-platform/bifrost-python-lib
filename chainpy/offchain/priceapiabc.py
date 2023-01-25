@@ -1,4 +1,3 @@
-from urllib import parse
 from abc import ABCMeta, abstractmethod
 from typing import List, Union, Dict, Tuple
 import json
@@ -67,22 +66,18 @@ class PriceApiABC(metaclass=ABCMeta):
         self._request_timeout_sec = request_timeout_sec
 
     def _request(self, api_url: str, params: dict = None, api_url_has_params=False):
-        parse.urlencode()
+        if params:
+            api_url += '&' if api_url_has_params else '?'
+            for key, value in params.items():
+                if type(value) == bool:
+                    value = str(value).lower()
 
+                api_url += "{0}={1}&".format(key, str(value))
+            api_url = api_url[:-1]
 
-
-        # if params:
-        #     api_url += '&' if api_url_has_params else '?'
-        #     for key, value in params.items():
-        #         if type(value) == bool:
-        #             value = str(value).lower()
-        #
-        #         api_url += "{0}={1}&".format(key, str(value))
-        #     api_url = api_url[:-1]
-        #
-        # result = requests.get(api_url, timeout=self._request_timeout_sec)
-        # result.raise_for_status()
-        # return json.loads(result.content.decode("utf-8"))
+        result = requests.get(api_url, timeout=self._request_timeout_sec)
+        result.raise_for_status()
+        return json.loads(result.content.decode("utf-8"))
 
     @property
     def base_url(self) -> str:
@@ -108,8 +103,30 @@ class PriceApiABC(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
+    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
         pass
+
+    @staticmethod
+    @abstractmethod
+    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: list) -> Tuple[EthAmount, EthAmount]:
+        pass
+
+    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
+        markets = self._fetch_markets_by_symbols(symbols)
+
+        ret = {}
+        for symbol in symbols:
+            price, volume = self._calc_price_and_volume_in_usd(symbol, markets)
+            if ret.get(symbol) is not None:
+                ret[symbol].append(price, volume)
+            else:
+                ret[symbol] = PriceVolume(symbol, price, volume)
+        return ret
 
     def get_current_prices_with_volumes(
             self, symbols: Union[Symbol, List[Symbol]]

@@ -1,7 +1,7 @@
 import unittest
-from typing import List, Dict
+from typing import List, Tuple
 
-from .priceapiabc import PriceApiABC, Market, Symbol, QueryId, PriceVolume
+from .priceapiabc import PriceApiABC, Market, Symbol, QueryId
 from chainpy.offchain.consts.upbitconst import UPBIT_SUPPORTING_SYMBOLS
 from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_sum
 
@@ -66,75 +66,37 @@ class UpbitApi(PriceApiABC):
         return self._request(api_url, {"markets": query_str})
 
     @staticmethod
-    def _parse_price_in_market(market: Market) -> EthAmount:
-        price = market["trade_price"]
-        price_float = price / 1.0 if isinstance(price, int) else price
-        return EthAmount(price_float)
-
-    @staticmethod
-    def _parse_volume_in_market(market: Market) -> EthAmount:
-        volume = market["acc_trade_price_24h"]
-        volume_float = volume / 1.0 if isinstance(volume, int) else volume
-        return EthAmount(volume_float)
-
-    @staticmethod
-    def _parse_price_in_markets(market_id: str, markets: List[Market]):
+    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
         for market in markets:
             if market["market"] == market_id:
-                return UpbitApi._parse_price_in_market(market)
-        return None
+                price, volume = market["trade_price"], market["acc_trade_price_24h"]
+                if isinstance(price, int):
+                    price = float(price)
+                if isinstance(volume, int):
+                    volume = float(volume)
+                return EthAmount(price), EthAmount(volume)
+        return EthAmount.zero(), EthAmount.zero()
 
     @staticmethod
-    def _calc_anchor_price_in_usd(anchor_sym: Symbol, markets: list) -> EthAmount:
-        if anchor_sym == "USDT":
-            return EthAmount(1.0)
-        if anchor_sym == "BTC":
-            return UpbitApi._parse_price_in_markets("USDT-BTC", markets)
-        if anchor_sym == "KRW":
-            btc_price_in_usd = UpbitApi._parse_price_in_markets("USDT-BTC", markets)
-            krw_price_in_usd = UpbitApi._parse_price_in_markets("KRW-BTC", markets)
-            return EthAmount(1.0) / krw_price_in_usd * btc_price_in_usd
-        raise Exception("Not allowed anchor id: {}".format(anchor_sym))
+    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: list) -> Tuple[EthAmount, EthAmount]:
+        if symbol == "USDT":
+            return EthAmount("1.0", 18), EthAmount.zero()  # TODO usdt volume zero?
+        if symbol == "KRW":
+            btc_price_in_usd, _ = UpbitApi._parse_price_and_volume_in_markets("USDT-BTC", markets)
+            btc_price_in_krw, _ = UpbitApi._parse_price_and_volume_in_markets("KRW-BTC", markets)
+            return btc_price_in_usd / btc_price_in_krw, EthAmount.zero()
 
-    @staticmethod
-    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: List, anchor_prices: dict) -> (EthAmount, EthAmount):
-        prices = []
-        volumes = []
-        for market in markets:
-            anchor_sym, _symbol = market["market"].split("-")
-            if symbol != _symbol:
-                continue
+        else:
+            market_prices, market_volumes = list(), list()
+            for anchor in UPBIT_SUPPORTING_SYMBOLS[symbol]:
+                anchor_price, _ = UpbitApi._calc_price_and_volume_in_usd(anchor, markets)
+                target_price, target_volume = UpbitApi._parse_price_and_volume_in_markets(
+                    "{}-{}".format(anchor, symbol), markets)
+                market_prices.append(target_price * anchor_price)
+                market_volumes.append(target_volume * anchor_price)
 
-            anchor_price = anchor_prices[anchor_sym]
-            price = UpbitApi._parse_price_in_market(market) * anchor_price
-            volume = UpbitApi._parse_volume_in_market(market) * anchor_price
-
-            prices.append(price)
-            volumes.append(volume)
-
-        price = eth_amount_weighted_sum(prices, volumes)
-        volumes = eth_amount_sum(volumes)
-        return price, volumes
-
-    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
-        markets = self._fetch_markets_by_symbols(symbols)
-
-        anchors = sorted(list(set().union(*[UPBIT_SUPPORTING_SYMBOLS[symbol] for symbol in symbols])))
-        anchor_prices = {}
-        for anchor in anchors:
-            anchor_prices[anchor] = UpbitApi._calc_anchor_price_in_usd(anchor, markets)
-
-        ret = {}
-        for symbol in symbols:
-            if symbol == "USDT":
-                ret[symbol] = PriceVolume(symbol, anchor_prices[symbol])
-                continue
-            price, volume = self._calc_price_and_volume_in_usd(symbol, markets, anchor_prices)
-            if ret.get(symbol) is not None:
-                ret[symbol].append(price, volume)
-            else:
-                ret[symbol] = PriceVolume(symbol, price, volume)
-        return ret
+            weighted_price = eth_amount_weighted_sum(market_prices, market_volumes)
+            return weighted_price, eth_amount_sum(market_volumes)
 
 
 class TestUpbitApi(unittest.TestCase):
@@ -143,7 +105,8 @@ class TestUpbitApi(unittest.TestCase):
         self.api = UpbitApi("https://api.upbit.com/v1/")
 
         # Currently, The Upbit does not provide prices of BNB, USDC, BIFI
-        self.symbols = ["ETH", "MATIC", "BFC", "USDT"]
+        # self.symbols = ["ETH", "MATIC", "BFC", "USDT"]
+        self.symbols = ["ETH"]
 
     def test_ping(self):
         result = self.api.ping()

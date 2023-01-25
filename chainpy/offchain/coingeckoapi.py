@@ -1,9 +1,9 @@
 import unittest
-from typing import List, Dict
+from typing import List, Tuple
 
 from ..eth.ethtype.amount import EthAmount
 from chainpy.offchain.consts.coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
-from ..offchain.priceapiabc import PriceApiABC, Market, Symbol, QueryId, PriceVolume
+from ..offchain.priceapiabc import PriceApiABC, Market, Symbol, QueryId
 
 
 class CoingeckoApi(PriceApiABC):
@@ -23,39 +23,30 @@ class CoingeckoApi(PriceApiABC):
     def _get_query_id_by_symbol(symbol: Symbol) -> QueryId:
         return COINGECKO_SUPPORTING_SYMBOLS[symbol]
 
-    @staticmethod
-    def _get_price_in_market(market: Market) -> EthAmount:
-        price = market["current_price"]
-        if isinstance(price, int):
-            price = price / 1.0  # casting to float
-        return EthAmount(price)
-
-    @staticmethod
-    def _get_volume_in_market(market: Market) -> EthAmount:
-        volume = market["total_volume"]
-        if isinstance(volume, int):
-            volume = volume / 1.0  # casting to float
-        return EthAmount(volume)
-
-    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
+    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
         # get not cached coin id
         market_ids = [self._get_query_id_by_symbol(symbol) for symbol in symbols]
         req_ids = ",".join(market_ids)
         api_url = "{}coins/markets".format(self.base_url)
 
-        ret = {}
-        markets = self._request(api_url, {"ids": req_ids, "vs_currency": "usd"})
-        for i, market in enumerate(markets):
-            # find key by value on dictionary
-            supporting_symbols = list(COINGECKO_SUPPORTING_SYMBOLS.keys())
-            symbol = supporting_symbols[list(COINGECKO_SUPPORTING_SYMBOLS.values()).index(market["id"])]
-            price = self._get_price_in_market(market)
-            volume = self._get_volume_in_market(market)
-            if ret.get(symbol) is not None:
-                ret[symbol].append(price, volume)
-            else:
-                ret[symbol] = PriceVolume(symbol, price, volume)
-        return ret
+        return self._request(api_url, {"ids": req_ids, "vs_currency": "usd"})
+
+    @staticmethod
+    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+        for market in markets:
+            if market["id"] == market_id:
+                price, volume = market["current_price"], market["total_volume"]
+                if isinstance(price, int):
+                    price = float(price)
+                if isinstance(volume, int):
+                    volume = float(volume)
+                return EthAmount(price), EthAmount(volume)
+        return EthAmount.zero(), EthAmount.zero()
+
+    @staticmethod
+    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: list) -> Tuple[EthAmount, EthAmount]:
+        market_id = COINGECKO_SUPPORTING_SYMBOLS[symbol]
+        return CoingeckoApi._parse_price_and_volume_in_markets(market_id, markets)
 
 
 class TestCoinGeckoApi(unittest.TestCase):

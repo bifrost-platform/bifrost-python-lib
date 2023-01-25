@@ -1,11 +1,11 @@
 import os
 import unittest
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from dotenv import load_dotenv
 
 from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
-from .priceapiabc import PriceApiABC, Symbol, QueryId, PriceVolume
+from .priceapiabc import PriceApiABC, Symbol, QueryId, Market
 from ..eth.managers.rpchandler import EthRpcClient
 from ..eth.ethtype.amount import EthAmount
 from bridgeconst.consts import Chain
@@ -28,22 +28,32 @@ class ChainlinkApi(PriceApiABC):
         return list(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys())
 
     @staticmethod
-    def _get_query_id_by_symbol(symbol: Symbol) -> QueryId:
+    def _get_query_id(symbol: Symbol) -> QueryId:
         return ETH_CHAINLINK_SUPPORTING_SYMBOLS[symbol]
 
-    def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
-        ret = {}
+    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
+
+        markets: List[Market]= list()
         for symbol in symbols:
             contract_address = ETH_CHAINLINK_SUPPORTING_SYMBOLS[symbol]
             if contract_address == "0x0000000000000000000000000000000000000000":
                 raise Exception("Not supported symbol (zero address): {}".format(symbol))
             result = self.__rpc_cli.eth_call({"to": contract_address, "data": "0xfeaf968c"})
-            price = EthAmount(int.from_bytes(result[32:64], byteorder="big"), 8)
-            if ret.get(symbol) is not None:
-                ret[symbol].append(price, EthAmount.zero())
-            else:
-                ret[symbol] = PriceVolume(symbol, price)
-        return ret
+            markets.append({"symbol": symbol, "data": result})
+        return markets
+
+    @staticmethod
+    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+        for market in markets:
+            if market["symbol"] == market_id:
+                price = EthAmount(int.from_bytes(market["data"][32:64], byteorder="big"), 8)
+                volume = EthAmount.zero()
+                return price, volume
+        return EthAmount.zero(), EthAmount.zero()
+
+    @staticmethod
+    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: list) -> Tuple[EthAmount, EthAmount]:
+        return ChainlinkApi._parse_price_and_volume_in_markets(symbol, markets)
 
 
 class TestChainLinkApi(unittest.TestCase):
