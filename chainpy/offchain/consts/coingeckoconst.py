@@ -1,4 +1,4 @@
-COINGECKO_SUPPORTING_SYMBOLS = {
+COINGECKO_SYMBOL_TO_QUERY_ID = {
     "1INCH": "1inch",
     "AAVE": "aave",
     "ADA": "cardano",
@@ -133,3 +133,5 @@ COINGECKO_SUPPORTING_SYMBOLS = {
     "KLAY": "klay-token",
     "BIFI": "bifi"
 }
+
+COINGECKO_SUPPORTING_SYMBOLS = list(COINGECKO_SYMBOL_TO_QUERY_ID.keys())

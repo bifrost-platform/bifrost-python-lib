@@ -1,15 +1,28 @@
 import unittest
 from typing import List, Dict, Tuple
 
-from .consts.binanceconst import BINANCE_SUPPORTING_SYMBOLS
+from .consts.binanceconst import BINANCE_SYMBOL_TO_ANCHORS
+from .utils import restore_replace
 from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_sum
-from ..offchain.priceapiabc import PriceApiABC, Symbol, PriceVolume, QueryId, Market
+from ..offchain.priceapiabc import PriceApiABC, Symbol, PriceVolume, QueryId, QueriedData, Price, Volume, AnchorSymbol
+
+f"""
+Binance API Client
+- open api url: https://api.binance.com/api/v1/
+- getting all prices: https://api.binance.com/api/v1/ticker/allPrices
+- getting information of specific asset: https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BNBUSDT%22,%22BNBBTC%22]
+
+Definitions. 
+- Symbol: symbol of the asset.
+- PairId: unique name of the asset pair; SYMBOL | ANCHOR_SYMBOL; e.g.) BTCUSDT, ETHBTC
+- PairData: information(dictionary) of the pair.  
+- MarketSymbol: symbol of the market.
+"""
 
 
-# https://api.binance.com/api/v1/ticker/allPrices
-# https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BNBUSDT%22,%22BNBBTC%22]
 class BinanceApi(PriceApiABC):
-    ANCHOR_SYMBOLS = ["BTC", "ETH", "USDT", "BNB", "BUSD"]
+    MARKET_SYMBOLS = ["BTC", "ETH", "USDT", "BNB", "BUSD"]
+    SYMBOL_REPLACE_MAP = {}
 
     def __init__(self, api_base_url: str, request_timeout_sec: int = 120):
         super().__init__(api_base_url, request_timeout_sec)
@@ -21,24 +34,28 @@ class BinanceApi(PriceApiABC):
 
     @staticmethod
     def is_anchor(symbol: Symbol) -> bool:
-        return symbol in BinanceApi.ANCHOR_SYMBOLS
+        return symbol in BinanceApi.MARKET_SYMBOLS
 
     @staticmethod
     def supported_symbols() -> List[Symbol]:
-        return list(BINANCE_SUPPORTING_SYMBOLS.keys())
+        return list(restore_replace(BINANCE_SYMBOL_TO_ANCHORS, BinanceApi.SYMBOL_REPLACE_MAP).keys())
+
+    @staticmethod
+    def _build_query_id(symbol: Symbol, anchor: AnchorSymbol) -> QueryId:
+        return "{}{}".format(symbol, anchor)
 
     @staticmethod
     def _get_query_ids(symbol: Symbol) -> List[QueryId]:
         if symbol == "USDT":
             return []
         else:
-            anchors = BINANCE_SUPPORTING_SYMBOLS[symbol]
-            return ["{}{}".format(symbol, anchor) for anchor in anchors]
+            anchors = BINANCE_SYMBOL_TO_ANCHORS[symbol]
+            return [BinanceApi._build_query_id(symbol, anchor) for anchor in anchors]
 
-    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
+    def _fetch_asset_status_by_symbols(self, symbols: List[Symbol]) -> List[QueriedData]:
         anchors = list()
         for symbol in symbols:
-            anchors += BINANCE_SUPPORTING_SYMBOLS[symbol]
+            anchors += BINANCE_SYMBOL_TO_ANCHORS[symbol]
 
         query_ids = []
         for symbol in symbols + anchors:
@@ -51,36 +68,38 @@ class BinanceApi(PriceApiABC):
         return self._request(api_url, {"symbols": joined_query_id})
 
     @staticmethod
-    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
-        for market in markets:
-            if market["symbol"] == market_id:
-                price, volume = market["lastPrice"], market["volume"]
+    def _parse_price_and_volume_from_queried_data(
+            query_id: QueryId, queried_data: List[QueriedData]
+    ) -> Tuple[Price, Volume]:
+        for data in queried_data:
+            if data["symbol"] == query_id:
+                price, volume = data["lastPrice"], data["volume"]
                 return EthAmount(price), EthAmount(volume)
         return EthAmount.zero(), EthAmount.zero()
 
     @staticmethod
-    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+    def _calc_price_and_volume_in_usd(symbol: Symbol, queried_data: List[QueriedData]) -> Tuple[Price, Volume]:
         if symbol == "USDT":
             return EthAmount("1.0", 18), EthAmount.zero()  # TODO usdt volume zero?
 
         else:
-            market_prices, market_volumes = list(), list()
-            for anchor in BINANCE_SUPPORTING_SYMBOLS[symbol]:
-                anchor_price, _ = BinanceApi._calc_price_and_volume_in_usd(anchor, markets)
-                target_price, target_volume = BinanceApi._parse_price_and_volume_in_markets(
-                    "{}{}".format(symbol, anchor), markets)
-                market_prices.append(target_price * anchor_price)
-                market_volumes.append(target_volume * anchor_price)
+            prices, volumes = list(), list()
+            for anchor in BINANCE_SYMBOL_TO_ANCHORS[symbol]:
+                anchor_price, _ = BinanceApi._calc_price_and_volume_in_usd(anchor, queried_data)
+                target_price, target_volume = BinanceApi._parse_price_and_volume_from_queried_data(
+                    BinanceApi._build_query_id(symbol, anchor), queried_data)
+                prices.append(target_price * anchor_price)
+                volumes.append(target_volume * anchor_price)
 
-            weighted_price = eth_amount_weighted_sum(market_prices, market_volumes)
-            return weighted_price, eth_amount_sum(market_volumes)
+            weighted_price = eth_amount_weighted_sum(prices, volumes)
+            return weighted_price, eth_amount_sum(volumes)
 
     def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
-        markets = self._fetch_markets_by_symbols(symbols)
+        pairs = self._fetch_asset_status_by_symbols(symbols)
 
         ret = {}
         for symbol in symbols:
-            price, volume = self._calc_price_and_volume_in_usd(symbol, markets)
+            price, volume = self._calc_price_and_volume_in_usd(symbol, pairs)
             if ret.get(symbol) is not None:
                 ret[symbol].append(price, volume)
             else:
@@ -103,7 +122,7 @@ class TestBinanceApi(unittest.TestCase):
     def test_supporting_symbol(self):
         symbols = self.api.supported_symbols()
         self.assertEqual(type(symbols), list)
-        self.assertEqual(symbols, list(BINANCE_SUPPORTING_SYMBOLS.keys()))
+        self.assertEqual(symbols, list(BINANCE_SYMBOL_TO_ANCHORS.keys()))
 
     def test_current_prices_with_volumes(self):
         symbol_to_pv = self.api.get_current_prices_with_volumes(self.symbols)

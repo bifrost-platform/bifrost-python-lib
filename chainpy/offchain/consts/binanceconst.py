@@ -1,5 +1,4 @@
-# symbol to anchors
-BINANCE_SUPPORTING_SYMBOLS = {
+BINANCE_SYMBOL_TO_ANCHORS = {
     "ETH": ["BTC", "USDT", "BUSD"],
     "LTC": ["BTC", "ETH", "USDT", "BNB", "BUSD"],
     "BNB": ["BTC", "ETH", "USDT", "BUSD"],
@@ -512,3 +511,5 @@ BINANCE_SUPPORTING_SYMBOLS = {
     "HIFI": ["ETH", "USDT"],
     "RPL": ["BTC", "BUSD", "USDT"]
 }
+
+BINANCE_SUPPORTING_SYMBOLS = list(BINANCE_SYMBOL_TO_ANCHORS.keys())

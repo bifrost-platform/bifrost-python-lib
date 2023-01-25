@@ -1,4 +1,4 @@
-UPBIT_SUPPORTING_SYMBOLS = {
+UPBIT_SYMBOL_TO_ANCHORS = {
     "1INCH": ["KRW", "BTC"],
     "AAVE": ["KRW", "BTC"],
     "ADA": ["KRW", "BTC", "USDT"],
@@ -32,7 +32,7 @@ UPBIT_SUPPORTING_SYMBOLS = {
     "TUSD": ["BTC", "USDT"],
     "UNI": ["BTC"],
     "USDT": ["USDT"],
-    "VET": "vechain",
+    "VET": ["KRW", "BTC"],
     "XLM": ["BTC", "KRW"],
     "XRP": ["KRW", "BTC", "USDT"],
     "XTZ": ["BTC", "KRW"],
@@ -40,3 +40,6 @@ UPBIT_SUPPORTING_SYMBOLS = {
     "BFC": ["BTC"],
     "KRW": []  # dummy
 }
+
+
+UPBIT_SUPPORTING_SYMBOLS = list(UPBIT_SYMBOL_TO_ANCHORS.keys())

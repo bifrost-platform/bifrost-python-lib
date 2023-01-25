@@ -1,17 +1,20 @@
 import os
 import unittest
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 
 from dotenv import load_dotenv
 
-from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
-from .priceapiabc import PriceApiABC, Symbol, QueryId, Market
+from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS
+from .priceapiabc import PriceApiABC, Symbol, QueryId, QueriedData, Price, Volume
+from .utils import restore_replace
 from ..eth.managers.rpchandler import EthRpcClient
 from ..eth.ethtype.amount import EthAmount
 from bridgeconst.consts import Chain
 
 
 class ChainlinkApi(PriceApiABC):
+    SYMBOL_REPLACE_MAP = {}
+
     def __init__(self, api_base_url: str, request_timeout_sec: int = 120):
         super().__init__(api_base_url, request_timeout_sec)
 
@@ -25,35 +28,36 @@ class ChainlinkApi(PriceApiABC):
 
     @staticmethod
     def supported_symbols() -> List[Symbol]:
-        return list(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys())
+        return list(restore_replace(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS, ChainlinkApi.SYMBOL_REPLACE_MAP).keys())
 
     @staticmethod
-    def _get_query_id(symbol: Symbol) -> QueryId:
-        return ETH_CHAINLINK_SUPPORTING_SYMBOLS[symbol]
+    def _get_contract_address(symbol: Symbol) -> QueryId:
+        return ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS[symbol]
 
-    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
-
-        markets: List[Market]= list()
+    def _fetch_asset_status_by_symbols(self, symbols: List[Symbol]) -> List[QueriedData]:
+        queried_data: List[QueriedData] = list()
         for symbol in symbols:
-            contract_address = ETH_CHAINLINK_SUPPORTING_SYMBOLS[symbol]
+            contract_address = ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS[symbol]
             if contract_address == "0x0000000000000000000000000000000000000000":
                 raise Exception("Not supported symbol (zero address): {}".format(symbol))
             result = self.__rpc_cli.eth_call({"to": contract_address, "data": "0xfeaf968c"})
-            markets.append({"symbol": symbol, "data": result})
-        return markets
+            queried_data.append({"symbol": symbol, "data": result})
+        return queried_data
 
     @staticmethod
-    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
-        for market in markets:
-            if market["symbol"] == market_id:
-                price = EthAmount(int.from_bytes(market["data"][32:64], byteorder="big"), 8)
+    def _parse_price_and_volume_from_queried_data(
+            query_id: QueryId, queried_data: List[QueriedData]
+    ) -> Tuple[Price, Volume]:
+        for data in queried_data:
+            if data["symbol"] == query_id:
+                price = EthAmount(int.from_bytes(data["data"][32:64], byteorder="big"), 8)
                 volume = EthAmount.zero()
                 return price, volume
         return EthAmount.zero(), EthAmount.zero()
 
     @staticmethod
-    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: list) -> Tuple[EthAmount, EthAmount]:
-        return ChainlinkApi._parse_price_and_volume_in_markets(symbol, markets)
+    def _calc_price_and_volume_in_usd(symbol: Symbol, queried_data: List[QueriedData]) -> Tuple[Price, Volume]:
+        return ChainlinkApi._parse_price_and_volume_from_queried_data(symbol, queried_data)
 
 
 class TestChainLinkApi(unittest.TestCase):
@@ -70,7 +74,7 @@ class TestChainLinkApi(unittest.TestCase):
     def test_supporting_symbol(self):
         symbols = self.api.supported_symbols()
         self.assertEqual(type(symbols), list)
-        self.assertEqual(symbols, list(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys()))
+        self.assertEqual(symbols, list(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS.keys()))
 
     def test_price_and_volumes(self):
         symbol_to_pv = self.api.get_current_prices_with_volumes(self.symbols)

@@ -3,15 +3,15 @@ from typing import List, Union, Dict, Tuple
 import json
 import requests
 
-from .utils import to_list
+from .utils import to_upper_list, replace_symbols, restore_replace
 from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_avg
 
-Symbol, QueryId, Market = str, str, dict
-Prices = Dict[Symbol, EthAmount]
+Symbol, AnchorSymbol, QueryId, QueriedData = str, str, str, dict
+Price, Volume, Symbol2Price = EthAmount, EthAmount, Dict[Symbol, EthAmount]
 
 
 class PriceVolume:
-    def __init__(self, symbol: Symbol, price: EthAmount, volume: EthAmount = None):
+    def __init__(self, symbol: Symbol, price: Price, volume: Volume = None):
         self._symbol = symbol
         self._price = price.change_decimal(18)
         self._volume = volume if volume is not None else EthAmount.zero()
@@ -20,17 +20,17 @@ class PriceVolume:
     def init(cls, symbol: Symbol):
         return cls(symbol, EthAmount.zero(), EthAmount.zero())
 
-    def append(self, price: EthAmount, volume: EthAmount):
+    def append(self, price: Price, volume: Volume):
         self._price = eth_amount_weighted_sum([self._price, price.change_decimal(18)], [self._volume, volume])
         self._volume += volume
 
-    def release(self) -> Tuple[EthAmount, EthAmount]:
+    def release(self) -> Tuple[Price, Volume]:
         return self._price, self._volume
 
-    def price(self) -> EthAmount:
+    def price(self) -> Price:
         return self._price
 
-    def volume(self) -> EthAmount:
+    def volume(self) -> Volume:
         return self._volume
 
     def symbol(self) -> Symbol:
@@ -38,7 +38,7 @@ class PriceVolume:
 
 
 class PricesVolumes:
-    def __init__(self, symbol: Symbol, prices: List[EthAmount], volumes: List[EthAmount]):
+    def __init__(self, symbol: Symbol, prices: List[Price], volumes: List[Volume]):
         self._symbol = symbol
         self._prices = prices
         self._volumes = volumes
@@ -47,20 +47,22 @@ class PricesVolumes:
     def init(cls, symbol: Symbol):
         return cls(symbol, [], [])
 
-    def append(self, price: EthAmount, volume: EthAmount):
+    def append(self, price: Price, volume: Volume):
         self._prices.append(price.change_decimal(18))
         self._volumes.append(volume)
 
-    def averaged_price(self) -> EthAmount:
+    def averaged_price(self) -> Price:
         if len(self._prices) == 0:
             raise Exception("No price: {}".format(self._symbol))
         return eth_amount_avg(self._prices)
 
-    def volume_weighted_price(self) -> EthAmount:
+    def volume_weighted_price(self) -> Price:
         return eth_amount_weighted_sum(self._prices, self._volumes)
 
 
 class PriceApiABC(metaclass=ABCMeta):
+    SYMBOL_REPLACE_MAP = {}
+
     def __init__(self, api_base_url: str, request_timeout_sec: int = 120):
         self._api_base_url = api_base_url
         self._request_timeout_sec = request_timeout_sec
@@ -103,25 +105,25 @@ class PriceApiABC(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def _fetch_markets_by_symbols(self, symbols: List[Symbol]) -> List[Market]:
+    def _fetch_asset_status_by_symbols(self, symbols: List[Symbol]) -> List[QueriedData]:
         pass
 
     @staticmethod
     @abstractmethod
-    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+    def _parse_price_and_volume_from_queried_data(query_id: QueryId, markets: List[QueriedData]) -> Tuple[Price, Volume]:
         pass
 
     @staticmethod
     @abstractmethod
-    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: list) -> Tuple[EthAmount, EthAmount]:
+    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: List[QueriedData]) -> Tuple[Price, Volume]:
         pass
 
     def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
-        markets = self._fetch_markets_by_symbols(symbols)
+        queried_data = self._fetch_asset_status_by_symbols(symbols)
 
         ret = {}
         for symbol in symbols:
-            price, volume = self._calc_price_and_volume_in_usd(symbol, markets)
+            price, volume = self._calc_price_and_volume_in_usd(symbol, queried_data)
             if ret.get(symbol) is not None:
                 ret[symbol].append(price, volume)
             else:
@@ -131,19 +133,20 @@ class PriceApiABC(metaclass=ABCMeta):
     def get_current_prices_with_volumes(
             self, symbols: Union[Symbol, List[Symbol]]
     ) -> Dict[Symbol, PriceVolume]:
-
-        symbols = to_list(symbols)
-        symbols = [symbol.upper() for symbol in symbols]
-
+        symbols = to_upper_list(symbols)
         supported_subset = self.check_supported(symbols)
         if symbols != supported_subset:
             raise Exception("Not supported symbols: {}".format(set(symbols).difference(supported_subset)))
 
-        return self.fetch_prices_with_volumes(symbols)
+        symbols = replace_symbols(symbols, self.__class__.SYMBOL_REPLACE_MAP)
+
+        pvs = self.fetch_prices_with_volumes(symbols)
+
+        return restore_replace(pvs, self.__class__.SYMBOL_REPLACE_MAP)
 
     def get_current_prices(
             self, symbols: Union[List[Symbol], Symbol]
-    ) -> Dict[Symbol, EthAmount]:
+    ) -> Dict[Symbol, Price]:
         results = self.get_current_prices_with_volumes(symbols)
         ret = dict()
         for symbol, pv in results.items():
