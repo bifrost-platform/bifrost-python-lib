@@ -1,17 +1,15 @@
 import unittest
-from typing import List, Dict
-from urllib import parse
-import requests
+from typing import List, Dict, Tuple
 
 from .consts.binanceconst import BINANCE_SUPPORTING_SYMBOLS
-from ..eth.ethtype.amount import EthAmount
+from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_sum
 from ..offchain.priceapiabc import PriceApiABC, Symbol, PriceVolume, QueryId, Market
 
 
 # https://api.binance.com/api/v1/ticker/allPrices
 # https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BNBUSDT%22,%22BNBBTC%22]
 class BinanceApi(PriceApiABC):
-    ANCHOR_SYMBOLS = ["BTC", "ETH", "USDT", "USDC", "BNB", "TUSD", "PAX", "USDC", "BUSD"]
+    ANCHOR_SYMBOLS = ["BTC", "ETH", "USDT", "BNB", "BUSD"]
 
     def __init__(self, api_base_url: str, request_timeout_sec: int = 120):
         super().__init__(api_base_url, request_timeout_sec)
@@ -48,10 +46,46 @@ class BinanceApi(PriceApiABC):
 
         query_ids = sorted(list(set(query_ids)))  # remove duplication
         api_url = "{}ticker/24hr".format(self.base_url)
-        return self._request(api_url, {"symbols": query_ids})
+
+        joined_query_id = "[%22" + "%22,%22".join(query_ids) + "%22]"
+        return self._request(api_url, {"symbols": joined_query_id})
+
+    @staticmethod
+    def _parse_price_and_volume_in_markets(market_id: str, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+        for market in markets:
+            if market["symbol"] == market_id:
+                price, volume = market["lastPrice"], market["volume"]
+                return EthAmount(price), EthAmount(volume)
+        return EthAmount.zero(), EthAmount.zero()
+
+    @staticmethod
+    def _calc_price_and_volume_in_usd(symbol: Symbol, markets: List[Market]) -> Tuple[EthAmount, EthAmount]:
+        if symbol == "USDT":
+            return EthAmount("1.0", 18), EthAmount.zero()  # TODO usdt volume zero?
+
+        else:
+            market_prices, market_volumes = list(), list()
+            for anchor in BINANCE_SUPPORTING_SYMBOLS[symbol]:
+                anchor_price, _ = BinanceApi._calc_price_and_volume_in_usd(anchor, markets)
+                target_price, target_volume = BinanceApi._parse_price_and_volume_in_markets(
+                    "{}{}".format(symbol, anchor), markets)
+                market_prices.append(target_price * anchor_price)
+                market_volumes.append(target_volume * anchor_price)
+
+            weighted_price = eth_amount_weighted_sum(market_prices, market_volumes)
+            return weighted_price, eth_amount_sum(market_volumes)
 
     def fetch_prices_with_volumes(self, symbols: List[Symbol]) -> Dict[Symbol, PriceVolume]:
-        pass
+        markets = self._fetch_markets_by_symbols(symbols)
+
+        ret = {}
+        for symbol in symbols:
+            price, volume = self._calc_price_and_volume_in_usd(symbol, markets)
+            if ret.get(symbol) is not None:
+                ret[symbol].append(price, volume)
+            else:
+                ret[symbol] = PriceVolume(symbol, price, volume)
+        return ret
 
 
 class TestBinanceApi(unittest.TestCase):
@@ -59,8 +93,8 @@ class TestBinanceApi(unittest.TestCase):
         # Open api url
         self.api = BinanceApi("https://api.binance.com/api/v3/")
 
-        # Currently, The Binance does not provide prices of BFC, BIFI
-        self.symbols = ["ETH", "BNB", "MATIC", "USDC"]
+        # Currently, The Binance does not provide prices of BFC, BIFI, USDC
+        self.symbols = ["ETH", "BNB", "MATIC"]
 
     def test_ping(self):
         result = self.api.ping()
@@ -72,35 +106,20 @@ class TestBinanceApi(unittest.TestCase):
         self.assertEqual(symbols, list(BINANCE_SUPPORTING_SYMBOLS.keys()))
 
     def test_current_prices_with_volumes(self):
-        # result = self.api._fetch_markets_by_symbols(self.symbols)
-        # print(result)
+        symbol_to_pv = self.api.get_current_prices_with_volumes(self.symbols)
+        for symbol, pv in symbol_to_pv.items():
+            self.assertTrue(symbol in self.symbols)
+            self.assertTrue(isinstance(pv.price(), EthAmount))
+            self.assertNotEqual(pv.price(), EthAmount.zero())
+            self.assertTrue(isinstance(pv.volume(), EthAmount))
+            if symbol == "USDT":
+                self.assertEqual(pv.volume(), EthAmount.zero())
+            else:
+                self.assertNotEqual(pv.volume(), EthAmount.zero())
 
-
-        url = parse.urlparse("https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BNBBTC%22,%22BNBBUSD%22]")
-        base_url = url.scheme + "://" + url.hostname + url.path + "?"
-        print("url: {}".format(base_url + url.query))
-        result = requests.get(base_url + url.query)
-        print(result)
-
-        print(url.scheme, url.netloc, url.hostname, url.path)
-
-        query = parse.urlencode({"symbols": ["ETHBTC", "ETHTUSD"]}, doseq=False, encoding="UTF-8")
-        print(query)
-        # result = requests.get("https://api.binance.com/api/v3/ticker/24hr?symbols=[%22ETHBTC%22,%22ETHTUSD%22]")
-        # print(result)
-
-
-    # def test_current_prices_with_volumes(self):
-    #     ids = ["bifrost"]
-    #     prices_and_volume_dict = self.api.get_current_price_and_volume(ids)
-    #     for coin_id, price_and_volume in prices_and_volume_dict.items():
-    #         self.assertTrue(coin_id in ids)
-    #         self.assertEqual(type(price_and_volume.price), EthAmount)
-    #         self.assertEqual(type(price_and_volume._volumes), EthAmount)
-
-    # def test_price(self):
-    #     ids = ["BFC", "BTC", "FIL"]
-    #     prices_dict = self.api.get_current_price(ids)
-    #     for coin_id, price in prices_dict.items():
-    #         self.assertTrue(coin_id in ids)
-    #         self.assertEqual(type(price), EthAmount)
+    def test_current_prices(self):
+        prices_dict = self.api.get_current_prices(self.symbols)
+        for symbol, price in prices_dict.items():
+            self.assertTrue(symbol in self.symbols)
+            self.assertTrue(isinstance(price, EthAmount))
+            self.assertNotEqual(price, EthAmount.zero())
