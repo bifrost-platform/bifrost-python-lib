@@ -5,11 +5,15 @@ from typing import List, Union, Dict, Optional, Callable
 
 from dotenv import load_dotenv
 
-from .chainlinkconst import ETH_CHAINLINK_SUPPORTING_SYMBOLS
-from .coingeckoconst import COINGECKO_SUPPORTING_SYMBOLS
-from .priceapiabc import PriceApiABC, Symbol, Prices, PricesVolumes
-from .upbitconst import UPBIT_SUPPORTING_SYMBOLS
-from .utils import to_list
+from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS
+from chainpy.offchain.consts.coingeckoconst import COINGECKO_SYMBOL_TO_QUERY_ID
+from .binanceapi import BinanceApi
+from .consts.gateioconst import GATE_IO_SYMBOL_TO_ANCHORS
+from .gateioapi import GateIoApi
+from .consts.binanceconst import BINANCE_SYMBOL_TO_ANCHORS
+from .priceapiabc import PriceApiABC, Symbol, Symbol2Price, PricesVolumes
+from chainpy.offchain.consts.upbitconst import UPBIT_SYMBOL_TO_ANCHORS
+from .utils import to_upper_list, restore_replace
 from ..eth.ethtype.amount import EthAmount
 from .chainlinkapi import ChainlinkApi
 from .coingeckoapi import CoingeckoApi
@@ -21,6 +25,7 @@ class PriceApiIdx(Enum):
     UPBIT = 2
     CHAINLINK = 3
     BINANCE = 4
+    GATEIO = 5
 
     @staticmethod
     def from_name(name: str) -> Optional["PriceApiIdx"]:
@@ -38,8 +43,11 @@ class PriceApiIdx(Enum):
             return UpbitApi
         if normalized_name == "Chainlink":
             return ChainlinkApi
-        # if normalized_name == "Binance":
-        #     return BinanceApi
+        if normalized_name == "Binance":
+            return BinanceApi
+        if normalized_name == "Gateio":
+            return GateIoApi
+
         raise Exception("Not supported api name: {}".format(src_name))
 
 
@@ -78,7 +86,7 @@ class PriceOracleAgg:
         return self.__supported_symbol_union
 
     @property
-    def supported_symbols_each(self):
+    def supported_symbols_each(self) -> Dict[PriceApiIdx, List[Symbol]]:
         return self.__supported_symbols_each
 
     def get_apis_supporting_symbol(self, symbol: Symbol) -> List[PriceApiIdx]:
@@ -90,7 +98,7 @@ class PriceOracleAgg:
 
     def fetch_prices_and_volumes(self, symbols: Union[Symbol, List[Symbol]]) -> Dict[Symbol, PricesVolumes]:
         # ensure symbols is list
-        symbols = to_list(symbols)
+        symbols = to_upper_list(symbols)
         symbols = [symbol.upper() for symbol in symbols]
 
         # ensure every symbol are supported
@@ -123,15 +131,15 @@ class PriceOracleAgg:
 
         return symbol_to_prices_volumes
 
-    def get_current_averaged_price(self, symbols: Union[Symbol, List[Symbol]]) -> Prices:
+    def get_current_averaged_price(self, symbols: Union[Symbol, List[Symbol]]) -> Symbol2Price:
         symbol_to_pv_list = self.fetch_prices_and_volumes(symbols)
 
-        symbol_to_price: Dict[Symbol, EthAmount] = {}
+        symbol_to_price: Symbol2Price = {}
         for symbol in symbols:
             symbol_to_price[symbol] = symbol_to_pv_list[symbol].averaged_price()
         return symbol_to_price
 
-    def get_current_weighted_price(self, symbols: Union[Symbol, List[Symbol]]) -> Prices:
+    def get_current_weighted_price(self, symbols: Union[Symbol, List[Symbol]]) -> Symbol2Price:
         symbol_to_pv_list = self.fetch_prices_and_volumes(symbols)
 
         symbol_to_price: Dict[Symbol, EthAmount] = {}
@@ -145,9 +153,11 @@ class TestPriceAggregator(unittest.TestCase):
         load_dotenv()
 
         urls = {
-          "Coingecko": "https://api.coingecko.com/api/v3/",
-          "Upbit": "https://api.upbit.com/v1/",
-          "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT")
+            "Coingecko": "https://api.coingecko.com/api/v3/",
+            "Upbit": "https://api.upbit.com/v1/",
+            "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT"),
+            "Binance": "https://api.binance.com/api/v3/",
+            "GateIo": "https://api.gateio.ws/api/v4/"
         }
         self.agg = PriceOracleAgg(urls)
         self.symbols = ["BFC", "ETH", "BNB", "MATIC", "USDC", "BIFI"]
@@ -157,13 +167,18 @@ class TestPriceAggregator(unittest.TestCase):
         self.assertTrue(result)
 
     def test_supporting_symbol(self):
-        actual_supported_symbols = self.agg.supported_symbols
-        expected_supported_symbols = set(COINGECKO_SUPPORTING_SYMBOLS.keys()).\
-            union(set(UPBIT_SUPPORTING_SYMBOLS.keys())).\
-            union(set(ETH_CHAINLINK_SUPPORTING_SYMBOLS.keys()))
+        coingecko_supports = list(restore_replace(COINGECKO_SYMBOL_TO_QUERY_ID, CoingeckoApi.SYMBOL_REPLACE_MAP).keys())
+        upbit_supports = list(restore_replace(UPBIT_SYMBOL_TO_ANCHORS, UpbitApi.SYMBOL_REPLACE_MAP).keys())
+        chainlink_supports = list(restore_replace(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS, ChainlinkApi.SYMBOL_REPLACE_MAP).keys())
+        binance_supports = list(restore_replace(BINANCE_SYMBOL_TO_ANCHORS, BinanceApi.SYMBOL_REPLACE_MAP).keys())
+        gate_io_supports = list(restore_replace(GATE_IO_SYMBOL_TO_ANCHORS, GateIoApi.SYMBOL_REPLACE_MAP).keys())
+        expected_supports = sorted(list(set(
+            coingecko_supports + upbit_supports + chainlink_supports + binance_supports + gate_io_supports
+        )))
 
+        actual_supported_symbols = sorted(self.agg.supported_symbols)
         self.assertEqual(type(actual_supported_symbols), list)
-        self.assertEqual(actual_supported_symbols, list(expected_supported_symbols))
+        self.assertEqual(actual_supported_symbols, expected_supports)
 
     def test_fetch_prices_and_volumes(self):
         results = self.agg.fetch_prices_and_volumes(self.symbols)
