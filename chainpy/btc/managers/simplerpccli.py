@@ -42,7 +42,7 @@ class SimpleBtcClient:
             "id": 1
         }
 
-        resp = requests.post(self.url, json=body, auth=self.__rpc_auth)
+        resp = requests.post(self.url, json=body)
         try:
             resp_json = resp.json()
         except json.decoder.JSONDecodeError as e:
