@@ -11,7 +11,7 @@ class LoggerSetting:
             file_path: str = None,
             max_bytes: int = 10 * 1024 * 1024,
             backup_count: int = 10,
-            log_format: str = "%(asctime)s [%(name)-10s] %(message)s"
+            log_format: str = "%(asctime)s [%(name)-12s] %(message)s"
     ):
         self.level = level
         self.file_path = file_path
@@ -48,6 +48,9 @@ class Logger:
     def reset(self, name: str = None, level: int = None):
         _name = self.name if name is None else name
         self.logger = logging.getLogger(_name)
+
+        if len(self.logger.handlers) > 0:
+            return
 
         _level = self.level if level is None else level
         self.logger.setLevel(_level)
