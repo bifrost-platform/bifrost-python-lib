@@ -49,6 +49,7 @@ class EthContractHandler(EthRpcClient):
         self._contracts = dict()
         self._contract_name_by_event_name = dict()
         self._event_name_by_topic = dict()
+        self._event_names_by_contract = dict()
 
         for contract_dict in contracts:
             abi_path = contract_dict.get("abi_path")
@@ -61,11 +62,17 @@ class EthContractHandler(EthRpcClient):
             for event in events:
                 # parse contract's address and abi
                 event_name = event["event_name"]
-                self._contract_name_by_event_name[event_name] = event["contract_name"]
+                contract_name = event["contract_name"]
+                self._contract_name_by_event_name[event_name] = contract_name
 
-                contract = self._contracts[event["contract_name"]]
+                contract = self._contracts[contract_name]
                 topic = contract.get_method_abi(event_name).get_topic()
                 self._event_name_by_topic[topic.hex()] = event_name
+
+                if not self._event_names_by_contract.get(contract):
+                    self._event_names_by_contract[contract] = [event_name]
+                else:
+                    self._event_names_by_contract[contract].append(event_name)
 
     @classmethod
     def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: Chain = None):
