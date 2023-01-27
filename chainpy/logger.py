@@ -1,4 +1,6 @@
+import os
 import logging.handlers
+from pathlib import Path
 
 from bridgeconst.consts import Chain
 from chainpy.eth.ethtype.hexbytes import EthAddress
@@ -8,13 +10,13 @@ class LoggerSetting:
     def __init__(
             self,
             level: int = logging.DEBUG,
-            file_path: str = None,
+            file_name: str = None,
             max_bytes: int = 10 * 1024 * 1024,
             backup_count: int = 10,
             log_format: str = "%(asctime)s [%(name)-12s] %(message)s"
     ):
         self.level = level
-        self.file_path = file_path
+        self.file_name = file_name
         self.max_bytes = max_bytes
         self.backup_count = backup_count
         self.log_format = log_format
@@ -22,13 +24,13 @@ class LoggerSetting:
     def reset(
             self,
             level: int = logging,
-            file_path: str = None,
+            file_name: str = None,
             max_bytes: int = 10 * 1024 * 1024,
             backup_count: int = 10,
             log_format: str = "%(asctime)s [%(name)-10s] %(message)s"
     ):
         self.level = level
-        self.file_path = file_path
+        self.file_name = file_name
         self.max_bytes = max_bytes
         self.backup_count = backup_count
         self.log_format = log_format
@@ -61,10 +63,15 @@ class Logger:
         stream_handler.setFormatter(formatter)
         self.logger.addHandler(stream_handler)
 
-        if logger_setting_global.file_path is not None:
-            file_handler = logging.handlers.RotatingFileHandler(
-                filename=logger_setting_global.file_path,
-                maxBytes=logger_setting_global.max_bytes,
+        if logger_setting_global.file_name is not None:
+            base_dir = "./logs/"
+            if not Path(base_dir).exists():
+                os.mkdir(base_dir)
+
+            file_handler = logging.handlers.TimedRotatingFileHandler(
+                filename=base_dir + logger_setting_global.file_name,
+                when="H",
+                interval=1,
                 backupCount=logger_setting_global.backup_count
             )
 
