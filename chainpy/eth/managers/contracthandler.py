@@ -130,7 +130,7 @@ class EthContractHandler(EthRpcClient):
 
     def get_contracts_by_event_name(self, event_name: str) -> List[EthContract]:
         contracts = list()
-        for contract, event_names in self._event_names_by_contract:
+        for contract, event_names in self._event_names_by_contract.items():
             if event_name in event_names:
                 contracts.append(contract)
         return contracts
