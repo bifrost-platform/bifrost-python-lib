@@ -2,7 +2,7 @@ import threading
 import unittest
 from typing import Optional, Union, List
 
-from .exceptions import select_exception
+from .exceptions import raise_integrated_exception
 from .rpchandler import DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, DEFAULT_BLOCK_AGING_BLOCKS, \
     DEFAULT_RPC_DOWN_ALLOW_SECS, DEFAULT_RPC_TX_BLOCK_DELAY
 from bridgeconst.consts import Chain
@@ -148,7 +148,7 @@ class EthChainManager(EthContractHandler):
         try:
             return self.eth_estimate_gas(tx_dict)
         except Exception as e:
-            select_exception(e)
+            raise_integrated_exception(e)
 
     def call_transaction(
             self,
@@ -261,7 +261,7 @@ class EthChainManager(EthContractHandler):
                 if tx_hash is None:
                     tx_hash = EthHashBytes.default()
             except Exception as e:
-                select_exception(e)
+                raise_integrated_exception(e)
         else:
             tx_hash = EthHashBytes.default()
 

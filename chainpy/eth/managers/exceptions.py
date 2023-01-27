@@ -31,11 +31,13 @@ class EthFeeCapError(Exception):
         super().__init__("[{}] {}".format(self.__class__.__name__, msg))
 
 
-def select_exception(e):
+def raise_integrated_exception(e):
     error_msg = e.args[0]["message"]
     if error_msg.startswith("VM Exception while processing transaction: "):
         raise RpcEVMError(error_msg)
     elif error_msg.startswith("execution reverted: "):
+        raise RpcEVMError(error_msg)
+    elif error_msg.startswith("execution reverted"):
         raise RpcEVMError(error_msg)
     elif error_msg.startswith("submit transaction to pool failed: Pool(AlreadyImported("):
         raise EthAlreadyImported(error_msg)

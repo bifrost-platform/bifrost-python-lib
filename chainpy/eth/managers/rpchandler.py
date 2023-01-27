@@ -6,6 +6,7 @@ import requests
 import time
 from typing import List, Optional, Union, Callable
 
+from .exceptions import raise_integrated_exception
 from .utils import merge_dict
 from ..ethtype.amount import EthAmount
 from bridgeconst.consts import Chain
@@ -164,7 +165,7 @@ class EthRpcClient:
             return response_json["result"]
         else:
             PrometheusExporter.exporting_rpc_failed(self.chain_index)
-            raise Exception(response_json["error"])
+            raise_integrated_exception(response_json["error"])
 
     @property
     def chain_index(self) -> Chain:
