@@ -158,34 +158,37 @@ class EthContractHandler(EthRpcClient):
         if to_block < from_block:
             return list()
 
-        emitter = self.get_contract_by_event_name(event_name)
-        if emitter is None:
-            return list()
-        emitter_addr = emitter.address
-        event_topic = emitter.get_method_abi(event_name).get_topic()
-
-        try:
-            raw_logs = self.eth_get_logs(from_block, to_block, [emitter_addr], [event_topic])
-        except RpcExceedRequestTime:
-            self.__max_log_num = self.__max_log_num // 2
-            delta_half = (to_block - from_block) // 2
-            detected_events = self.small_ranged_collect_events(event_name, from_block, from_block + delta_half)
-            detected_events += self.small_ranged_collect_events(event_name, from_block + delta_half + 1, to_block)
-            return detected_events
-
         historical_logs = list()
-        for raw_log in raw_logs:
-            # loads information related to the log
-            topic, contract_address = EthHashBytes(raw_log.topics[0]), EthAddress(raw_log.address)
-            event_name = self.get_event_name_by_topic(topic)
-            contract_name = self.get_contract_name_by_event_name(event_name)
+        for emitter in self.get_contracts_by_event_name(event_name):
+            # emitter = self.get_contract_by_event_name(event_name)
+            if emitter is None:
+                # return list()
+                continue
+            emitter_addr = emitter.address
+            event_topic = emitter.get_method_abi(event_name).get_topic()
 
-            # check weather the log was emitted by one of target contracts
-            if emitter_addr != contract_address:
-                raise Exception("Topic and Contract address in the event are not matched.")
-            # build event object and collect it (to return)
-            detected_event = DetectedEvent(self.chain_index, contract_name, event_name, raw_log)
-            historical_logs.append(detected_event)
+            try:
+                raw_logs = self.eth_get_logs(from_block, to_block, [emitter_addr], [event_topic])
+            except RpcExceedRequestTime:
+                self.__max_log_num = self.__max_log_num // 2
+                delta_half = (to_block - from_block) // 2
+                detected_events = self.small_ranged_collect_events(event_name, from_block, from_block + delta_half)
+                detected_events += self.small_ranged_collect_events(event_name, from_block + delta_half + 1, to_block)
+                return detected_events
+
+            for raw_log in raw_logs:
+                # loads information related to the log
+                topic, contract_address = EthHashBytes(raw_log.topics[0]), EthAddress(raw_log.address)
+                event_name = self.get_event_name_by_topic(topic)
+                # contract_name = self.get_contract_name_by_event_name(event_name)
+                contract_name = emitter.contract_name
+
+                # check weather the log was emitted by one of target contracts
+                if emitter_addr != contract_address:
+                    raise Exception("Topic and Contract address in the event are not matched.")
+                # build event object and collect it (to return)
+                detected_event = DetectedEvent(self.chain_index, contract_name, event_name, raw_log)
+                historical_logs.append(detected_event)
 
         self.latest_height = to_block + 1
 
