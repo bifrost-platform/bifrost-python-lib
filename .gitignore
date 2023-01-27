@@ -131,3 +131,6 @@ dmypy.json
 .idea
 
 configs/
+
+# private test data
+/chainpy/tests/data/private.json
