@@ -37,42 +37,55 @@ class LoggerSetting:
 logger_setting_global = LoggerSetting()
 
 
-def formatted_log(
-        logger_obj,
-        relayer_addr: EthAddress = EthAddress.default(),
-        log_id: str = None,
-        related_chain: Chain = None,
-        log_data: str = None):
-    if log_id is None:
-        return
-    msg = "{}:{}:{}:{}".format(
-        relayer_addr.hex()[:10],
-        log_id,
-        related_chain,
-        log_data
-    )
-    logger_obj.info(msg)
+class Logger:
+    def __init__(self, name: str, level: int = logger_setting_global.level):
+        """ generate logger with "name" """
+        self.name = name
+        self.level = level
+        self.logger = None
+        self.reset(name, level)
 
+    def reset(self, name: str = None, level: int = None):
+        _name = self.name if name is None else name
+        self.logger = logging.getLogger(_name)
 
-def Logger(name: str, level=logger_setting_global.level):
-    """ generate logger with "name" """
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
+        _level = self.level if level is None else level
+        self.logger.setLevel(_level)
 
-    # define formatter and handler
-    formatter = logging.Formatter(logger_setting_global.log_format)
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(formatter)
-    logger.addHandler(stream_handler)
+        # define formatter and handler
+        formatter = logging.Formatter(logger_setting_global.log_format)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        self.logger.addHandler(stream_handler)
 
-    if logger_setting_global.file_path is not None:
-        file_handler = logging.handlers.RotatingFileHandler(
-            filename=logger_setting_global.file_path,
-            maxBytes=logger_setting_global.max_bytes,
-            backupCount=logger_setting_global.backup_count
+        if logger_setting_global.file_path is not None:
+            file_handler = logging.handlers.RotatingFileHandler(
+                filename=logger_setting_global.file_path,
+                maxBytes=logger_setting_global.max_bytes,
+                backupCount=logger_setting_global.backup_count
+            )
+
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
+
+    def info(self, msg: str):
+        self.logger.info(msg)
+
+    def debug(self, msg: str):
+        self.logger.debug(msg)
+
+    def formatted_log(
+            self,
+            relayer_addr: EthAddress = EthAddress.default(),
+            log_id: str = None,
+            related_chain: Chain = None,
+            log_data: str = None):
+        if log_id is None:
+            return
+        msg = "{}:{}:{}:{}".format(
+            relayer_addr.hex()[:10],
+            log_id,
+            related_chain,
+            log_data
         )
-
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-
-    return logger
+        self.logger.info(msg)

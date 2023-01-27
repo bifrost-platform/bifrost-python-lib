@@ -10,18 +10,12 @@ from bridgeconst.consts import Chain
 
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.exceptions import RpcEVMError
-from ..logger import Logger, formatted_log
+from ..logger import Logger
 
 from .utils import timestamp_msec
 from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 from ..prometheus_metric import PrometheusExporter
-
-consumer_logger = Logger("Consumer", logging.INFO)
-receipt_checker_logger = Logger("Receipt", logging.INFO)
-tx_sender_logger = Logger("FailToSendTx", logging.INFO)
-evm_logger = Logger("Evm", logging.DEBUG)
-bridge_logger = Logger("Bridge", logging.INFO)
 
 
 SendEventABC = Union[ChainEventABC, PeriodicEventABC]
@@ -74,6 +68,12 @@ class EventBridge(MultiChainMonitor):
         super().__init__(multichain_config)
         self.cache = KeyValueCache(cache_value_type, max_length)
 
+        self.consumer_logger = Logger("Consumer", logging.INFO)
+        self.receipt_checker_logger = Logger("Receipt", logging.INFO)
+        self.tx_sender_logger = Logger("FailToSendTx", logging.INFO)
+        self.evm_logger = Logger("Evm", logging.DEBUG)
+        self.bridge_logger = Logger("Bridge", logging.INFO)
+
     def has_key(self, key: int) -> bool:
         if self.cache is None:
             raise Exception("Authority checker is not initiated yet.")
@@ -117,8 +117,7 @@ class EventBridge(MultiChainMonitor):
             tx = self.world_build_transaction(dst_chain, contract_name, method_name, params)
             tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
 
-            formatted_log(
-                consumer_logger,
+            self.consumer_logger.formatted_log(
                 relayer_addr=self.active_account.address,
                 log_id=event.summary(),
                 related_chain=dst_chain,
@@ -127,8 +126,7 @@ class EventBridge(MultiChainMonitor):
 
             if tx_hash == EthHashBytes.default():
                 """ expected fee issue """
-                formatted_log(
-                    tx_sender_logger,
+                self.tx_sender_logger.formatted_log(
                     relayer_addr=self.active_account.address,
                     log_id=event.summary(),
                     related_chain=dst_chain,
@@ -144,8 +142,7 @@ class EventBridge(MultiChainMonitor):
 
         except RpcEVMError as e:
             # not-consume user nonce.
-            formatted_log(
-                evm_logger,
+            self.evm_logger.formatted_log(
                 relayer_addr=self.active_account.address,
                 log_id=event.summary(),
                 related_chain=dst_chain,
@@ -171,8 +168,7 @@ class EventBridge(MultiChainMonitor):
         else:
             raise Exception("Not allowed receipt status")
 
-        formatted_log(
-            receipt_checker_logger,
+        self.receipt_checker_logger.formatted_log(
             relayer_addr=self.active_account.address,
             log_id=event.summary(),
             related_chain=receipt_params.on_chain,
@@ -230,8 +226,7 @@ class EventBridge(MultiChainMonitor):
             monitor_alive = monitor_th.is_alive()
             PrometheusExporter.exporting_thread_alive("monitor", monitor_alive)
             if not monitor_alive:
-                formatted_log(
-                    bridge_logger,
+                self.bridge_logger.formatted_log(
                     relayer_addr=self.active_account.address,
                     log_id="ThreadHealthCheck",
                     log_data="Monitor thread has been dead. re-boot after 60 secs")
@@ -241,16 +236,14 @@ class EventBridge(MultiChainMonitor):
             sender_alive = sender_th.is_alive()
             PrometheusExporter.exporting_thread_alive("sender", sender_alive)
             if not sender_alive:
-                formatted_log(
-                    bridge_logger,
+                self.bridge_logger.formatted_log(
                     relayer_addr=self.active_account.address,
                     log_id="ThreadHealthCheck",
                     log_data="Sender thread has been dead. re-boot after 60 secs")
                 sleep(60)
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
-            formatted_log(
-                bridge_logger,
+            self.bridge_logger.formatted_log(
                 relayer_addr=self.active_account.address,
                 log_id="ThreadHealthCheck",
                 log_data="Check the survival of the threads every 60 seconds.")

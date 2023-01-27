@@ -13,10 +13,9 @@ from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 from ..ethtype.chaindata import EthBlock, EthReceipt, EthLog
 from ..ethtype.exceptions import *
 from ..ethtype.transaction import EthTransaction
-from ...logger import Logger, formatted_log
+from ...logger import Logger
 from ...prometheus_metric import PrometheusExporter
 
-rpc_logger = Logger("RPC-Client", logging.INFO)
 RPC_RETRY_MAX_RETRY_NUM = 20
 RPC_RETRY_SLEEP_TIME_IN_SECS = 180
 DEFAULT_RECEIPT_MAX_RETRY: int = 10
@@ -77,6 +76,7 @@ class EthRpcClient:
         if self.__url_with_access_key:
             resp = self.send_request("eth_chainId", [])
             self.__chain_id = int(resp, 16)
+        self.logger = Logger("RPC-Client", logging.INFO)
 
     @classmethod
     def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: Chain = None):
@@ -137,7 +137,7 @@ class EthRpcClient:
             response = requests.post(self.url, json=body, headers=headers)
         except Exception as e:
             PrometheusExporter.exporting_rpc_failed(self.chain_index)
-            formatted_log(rpc_logger, log_id="RPCException", related_chain=self._chain_index, log_data=str(e))
+            self.logger.formatted_log(log_id="RPCException", related_chain=self._chain_index, log_data=str(e))
             print("request will be re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec))
             time.sleep(self.__rpc_server_downtime_allow_sec)
             print("let's try it again!")
@@ -152,8 +152,7 @@ class EthRpcClient:
                 response_json = response.json()
         except Exception as e:
             PrometheusExporter.exporting_rpc_failed(self.chain_index)
-            formatted_log(
-                rpc_logger,
+            self.logger.formatted_log(
                 log_id="RequestError",
                 related_chain=self._chain_index,
                 log_data=str(response)
