@@ -78,6 +78,9 @@ class Logger:
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
 
+    def error(self, msg: str):
+        self.logger.error(msg)
+
     def info(self, msg: str):
         self.logger.info(msg)
 
