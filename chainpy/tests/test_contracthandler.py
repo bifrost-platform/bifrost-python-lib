@@ -8,9 +8,16 @@ def test_collect_events():
 
     for chain in multi_chain_monitor.supported_chain_list:
         chain_manager = multi_chain_monitor.get_chain_manager_of(chain)
+        # BFC_MAIN
         detected_events = chain_manager.small_ranged_collect_events("Unify_Split", 383000, 384000)
         detected_events += chain_manager.small_ranged_collect_events("Vault", 383000, 384000)
         detected_events += chain_manager.small_ranged_collect_events("Socket", 383000, 384000)
+        # ETH_MAIN
+        detected_events += chain_manager.small_ranged_collect_events("Vault", 16491000, 16492000)
+        detected_events += chain_manager.small_ranged_collect_events("Socket", 16491000, 16492000)
+        # BNB_MAIN
+        detected_events += chain_manager.small_ranged_collect_events("Vault", 24889000, 24890000)
+        detected_events += chain_manager.small_ranged_collect_events("Socket", 24889000, 24890000)
 
         for detected_event in detected_events:
             event_name = detected_event.event_name
