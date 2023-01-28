@@ -161,9 +161,6 @@ class EthContractHandler(EthRpcClient):
         historical_logs = list()
         for emitter in self.get_contracts_by_event_name(event_name):
             # emitter = self.get_contract_by_event_name(event_name)
-            if emitter is None:
-                # return list()
-                continue
             emitter_addr = emitter.address
             event_topic = emitter.get_method_abi(event_name).get_topic()
 
