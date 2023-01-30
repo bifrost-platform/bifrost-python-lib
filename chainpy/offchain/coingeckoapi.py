@@ -30,7 +30,7 @@ class CoingeckoApi(PriceApiABC):
         # get not cached coin id
         query_ids = [self._get_query_id_by_symbol(symbol) for symbol in symbols]
         req_ids = ",".join(query_ids)
-        api_url = "{}coins/queried_data".format(self.base_url)
+        api_url = "{}coins/markets".format(self.base_url)
         return self._request(api_url, {"ids": req_ids, "vs_currency": "usd"})
 
     @staticmethod
