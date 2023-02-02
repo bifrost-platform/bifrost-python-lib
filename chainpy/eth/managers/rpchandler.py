@@ -179,7 +179,7 @@ class EthRpcClient:
         # Evm error always gets caught here.
         PrometheusExporter.exporting_rpc_failed(self.chain)
         if response_json.get("error") is not None:
-            raise_integrated_exception(self.chain, error_msg=response_json["error"])
+            raise_integrated_exception(self.chain, error_json=response_json["error"])
         else:
             # case: returned result as None
             raise_integrated_exception(self.chain, is_none_result=True)

@@ -63,13 +63,13 @@ class EthFeeCapError(Exception):
 def raise_integrated_exception(
         chain: Chain,
         e: Exception = None,
-        error_msg: Optional[Union[str, dict]] = None,
+        error_json: Optional[Union[str, dict]] = None,
         is_none_result: bool = False
 ):
     if is_none_result:
         raise RpcNoneResult(chain, "None rpc-result")
-    elif isinstance(e, dict):
-        error_msg = e["message"]
+    elif isinstance(error_json, dict):
+        error_msg = error_json["message"]
     else:
         error_msg = str(e)
 
