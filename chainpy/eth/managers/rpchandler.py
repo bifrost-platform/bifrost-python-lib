@@ -308,7 +308,6 @@ class EthRpcClient:
             receipt = get_receipt_func(tx_hash)
             if receipt is not None:
                 return receipt
-            print("sleep {} sec".format(self.__block_period_sec / 2))  # TODO remove
             time.sleep(self.__block_period_sec / 2)  # wait half block
         return None
 

@@ -9,6 +9,7 @@ from typing import Optional, List, Dict
 from .hexbytes import EthAddress, EthHexBytes, EthHashBytes
 from .utils import keccak_hash
 from .exceptions import *
+from ...logger import global_logger
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -131,7 +132,10 @@ class Abi:
             if method["name"] not in self.method_map:
                 self.method_map[method["name"]] = method
             elif method["name"] in self.method_map:
-                print("error: {}".format(method["name"]))
+                global_logger.formatted_log(
+                    "Library",
+                    msg="AbiCollision: {}".format(method["name"])
+                )
                 raise EthAlreadyExistError(key=method["name"])
             else:
                 raise EthUnknownSpecError("function in abi has no name")

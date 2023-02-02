@@ -2,8 +2,11 @@ import json
 from time import sleep
 
 import requests
+from bridgeconst.consts import Chain
 from requests.auth import HTTPBasicAuth
 from typing import Union
+
+from chainpy.logger import global_logger
 
 BITCOIN_CONFIRMATION_HEIGHT = 6
 
@@ -45,8 +48,12 @@ class SimpleBtcClient:
         try:
             resp_json = resp.json()
         except json.decoder.JSONDecodeError as e:
+            global_logger.formatted_log(
+                "RPCException",
+                related_chain=Chain.BFC_MAIN,
+                msg="re-run after sleeping 60 secs"
+            )
             sleep(60)
-            print("re-run after sleeping 60 secs")
             return self._send_request(method, params)
 
         if resp_json.get("result") is None:
