@@ -13,7 +13,6 @@ from ..ethtype.transaction import EthTransaction
 from ..managers.utils import FeeConfig, merge_dict
 from ..managers.contracthandler import EthContractHandler
 
-
 PRIORITY_FEE_MULTIPLIER = 4
 TYPE0_GAS_MULTIPLIER = 1.5
 TYPE2_GAS_MULTIPLIER = 2
@@ -145,10 +144,7 @@ class EthChainManager(EthContractHandler):
         if "chainId" in tx_dict:
             del tx_dict["chainId"]
 
-        try:
-            return self.eth_estimate_gas(tx_dict)
-        except Exception as e:
-            raise_integrated_exception(e)
+        return self.eth_estimate_gas(tx_dict)
 
     def call_transaction(
             self,
@@ -203,7 +199,7 @@ class EthChainManager(EthContractHandler):
             gas_limit_multiplier: float = 1.0,
             boost: bool = False,
             sender_account: EthAccount = None,
-                              ) -> (bool, EthTransaction):
+    ) -> (bool, EthTransaction):
 
         if gas_limit is None:
             gas_limit = self.estimate_tx(tx, sender_account.address)
@@ -303,9 +299,11 @@ class TestTransaction(unittest.TestCase):
         tx_obj: EthTransaction = EthTransaction.init(
             int("0xbfc0", 16),  # chain_id
             EthAddress("0x7abd332cf88ca31725fffb21795f905837445352"),  # to
-            data=EthHexBytes("0x6196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874e")
+            data=EthHexBytes(
+                "0x6196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874e")
         )
-        tx_obj.set_nonce(int("0x301f", 16)).set_gas_prices(int("0x015d3ef79801", 16), int("0x01", 16)).set_gas_limit(int("0x036e54", 16))
+        tx_obj.set_nonce(int("0x301f", 16)).set_gas_prices(int("0x015d3ef79801", 16), int("0x01", 16)).set_gas_limit(
+            int("0x036e54", 16))
         self.assertEqual(tx_obj.serialize(), self.serialized_tx)
 
     def test_account(self):

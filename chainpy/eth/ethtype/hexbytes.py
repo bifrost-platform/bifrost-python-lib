@@ -1,7 +1,6 @@
 from typing import cast
 from .utils import *
 
-
 ETH_HASH_BYTES_SIZE = 32
 ETH_ADDR_BYTES_SIZE = 20
 
@@ -10,6 +9,7 @@ class EthHexBytes(bytes):
     """
     Hex byte Class with Ensured Size.
     """
+
     def __new__(cls, val: Union[bool, bytearray, bytes, int, str], size: int = None) -> Union['EthHexBytes', None]:
         if val is None:
             return val
@@ -88,6 +88,7 @@ class EthAddress(EthHexBytes):
     """
     Hex String Class with Ensured Size.
     """
+
     def __new__(cls, val: Union[bool, bytearray, bytes, int, str]) -> Union['EthAddress', None]:
         return cast(EthAddress, super().__new__(cls, val, ETH_ADDR_BYTES_SIZE))
 

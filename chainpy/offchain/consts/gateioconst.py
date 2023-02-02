@@ -1,6 +1,3 @@
-
-
-
 GATE_IO_SYMBOL_TO_ANCHORS = {
     "USDT": [],
     "SRK": ['ETH', 'USDT'],
@@ -1916,6 +1913,5 @@ GATE_IO_SYMBOL_TO_ANCHORS = {
     "STPT": ['USDT'],
     "THETA3S": ['USDT']
 }
-
 
 GATE_IO_SUPPORTING_SYMBOLS = list(GATE_IO_SYMBOL_TO_ANCHORS.keys())

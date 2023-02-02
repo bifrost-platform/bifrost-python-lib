@@ -235,7 +235,6 @@ class EthTransaction:
         if self.type < 2:
             transaction["gasPrice"] = hex(self.gas_price) if not encoded else self.gas_price
         if self.type > 0:
-
             transaction["accessList"] = self.access_list
         if self.type == 2:
             transaction["maxFeePerGas"] = hex(self.max_fee_per_gas) if not encoded else self.max_fee_per_gas

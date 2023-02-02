@@ -169,7 +169,8 @@ class TestPriceAggregator(unittest.TestCase):
     def test_supporting_symbol(self):
         coingecko_supports = list(restore_replace(COINGECKO_SYMBOL_TO_QUERY_ID, CoingeckoApi.SYMBOL_REPLACE_MAP).keys())
         upbit_supports = list(restore_replace(UPBIT_SYMBOL_TO_ANCHORS, UpbitApi.SYMBOL_REPLACE_MAP).keys())
-        chainlink_supports = list(restore_replace(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS, ChainlinkApi.SYMBOL_REPLACE_MAP).keys())
+        chainlink_supports = list(
+            restore_replace(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS, ChainlinkApi.SYMBOL_REPLACE_MAP).keys())
         binance_supports = list(restore_replace(BINANCE_SYMBOL_TO_ANCHORS, BinanceApi.SYMBOL_REPLACE_MAP).keys())
         gate_io_supports = list(restore_replace(GATE_IO_SYMBOL_TO_ANCHORS, GateIoApi.SYMBOL_REPLACE_MAP).keys())
         expected_supports = sorted(list(set(

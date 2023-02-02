@@ -5,7 +5,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 from typing import Union
 
-
 BITCOIN_CONFIRMATION_HEIGHT = 6
 
 

@@ -59,7 +59,7 @@ BINANCE_SYMBOL_TO_ANCHORS = {
     "DLT": ["BNB", "BTC", "ETH"],
     "AMB": ["BTC", "ETH", "BNB", "BUSD"],
     "BAT": ["BTC", "ETH", "BNB", "USDT", "BUSD"],
-    "BCPT": ["BTC", "ETH", "BNB",       "PAX"],
+    "BCPT": ["BTC", "ETH", "BNB", "PAX"],
     "ARN": ["BTC", "ETH"],
     "GVT": ["BTC", "ETH"],
     "CDT": ["BTC", "ETH"],

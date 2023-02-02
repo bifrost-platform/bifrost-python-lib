@@ -2,7 +2,6 @@ from typing import Dict
 from prometheus_client import Gauge, start_http_server
 from bridgeconst.consts import Chain
 
-
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"
 SENDER_ALIVE_QUERY_NAME = "relayer_sender_alive"
 RPC_REQUESTS_QUERY_NAME = "relayer_rpc_requests_on_chain"

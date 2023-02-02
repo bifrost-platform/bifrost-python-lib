@@ -110,7 +110,8 @@ class PriceApiABC(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def _parse_price_and_volume_from_queried_data(query_id: QueryId, markets: List[QueriedData]) -> Tuple[Price, Volume]:
+    def _parse_price_and_volume_from_queried_data(query_id: QueryId, markets: List[QueriedData]) -> Tuple[
+        Price, Volume]:
         pass
 
     @staticmethod

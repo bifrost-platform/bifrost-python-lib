@@ -41,5 +41,4 @@ UPBIT_SYMBOL_TO_ANCHORS = {
     "KRW": []  # dummy
 }
 
-
 UPBIT_SUPPORTING_SYMBOLS = list(UPBIT_SYMBOL_TO_ANCHORS.keys())
