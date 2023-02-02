@@ -32,10 +32,11 @@ class EthFeeCapError(Exception):
 
 
 def raise_integrated_exception(e):
-    error_msg = e.args[0]["message"]
+    error_msg = str(e)
     if error_msg.startswith("VM Exception while processing transaction: "):
         raise RpcEVMError(error_msg)
     elif error_msg.startswith("execution reverted: "):
+        # TODO remove
         raise RpcEVMError(error_msg)
     elif error_msg.startswith("execution reverted"):
         raise RpcEVMError(error_msg)
