@@ -32,6 +32,8 @@ class KeyValueCache:
             raise Exception("Not allowed type of value: expected({}), actual({})".format(self.value_type, type(value)))
 
     def add_value(self, key: int, value: Any):
+        if value is None:
+            return
         self._value_type_check(value)
         self.cache[key] = value
         self.latest_item = self._sort_dict()
