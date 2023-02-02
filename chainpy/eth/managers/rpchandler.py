@@ -169,20 +169,19 @@ class EthRpcClient:
             global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=resend_notify_msg)
             return self.send_request(method, params, cnt + 1)
 
-        except Exception as e:
+        except Exception:
             # just defensive code
             raise Exception("Not handled error on {}: {}".format(self.chain.name, response.content))
 
-        if response_json.get("result") is not None:
+        if "result" in list(response_json.keys()):
             return response_json["result"]
 
         # Evm error always gets caught here.
         PrometheusExporter.exporting_rpc_failed(self.chain)
-        if response_json.get("error") is not None:
+        if "result" in list(response_json.keys()):
             raise_integrated_exception(self.chain, error_json=response_json["error"])
         else:
-            # case: returned result as None
-            raise_integrated_exception(self.chain, is_none_result=True)
+            raise Exception("Not handled error on {}: {}".format(self.chain.name, response.content))
 
     @property
     def chain(self) -> Chain:
