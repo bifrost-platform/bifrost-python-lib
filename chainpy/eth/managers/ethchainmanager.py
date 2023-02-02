@@ -252,12 +252,9 @@ class EthChainManager(EthContractHandler):
             if not tx_with_fee.is_sendable():
                 raise Exception("Check transaction parameters")
             signed_raw_tx = tx_with_fee.sign_transaction(self.__account)
-            try:
-                tx_hash = self.eth_send_raw_transaction(signed_raw_tx)
-                if tx_hash is None:
-                    tx_hash = EthHashBytes.default()
-            except Exception as e:
-                raise_integrated_exception(e)
+            tx_hash = self.eth_send_raw_transaction(signed_raw_tx)
+            if tx_hash is None:
+                tx_hash = EthHashBytes.default()
         else:
             tx_hash = EthHashBytes.default()
 
