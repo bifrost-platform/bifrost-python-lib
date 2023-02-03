@@ -94,10 +94,12 @@ class AbiMethod:
         topic_bytes = keccak_hash(pre_image.encode())
         return EthHashBytes(topic_bytes)
 
-    def decode_input_data(self, encoded_data: EthHexBytes):
-        # TODO test, where is function selector??
+    def decode_input_data(self, encoded_data: Union[EthHexBytes, str], include_function_selector: bool = True):
+        if isinstance(encoded_data, str):
+            encoded_data = EthHexBytes(encoded_data)
+        target_data = encoded_data[4:] if include_function_selector else encoded_data
         types_list = self.get_input_types_list()
-        return eth_abi.decode_abi(types_list, encoded_data)
+        return eth_abi.decode_abi(types_list, target_data)
 
     def decode_output_data(self, encoded_data: Union[str, EthHexBytes]):
         if isinstance(encoded_data, str):
@@ -105,15 +107,18 @@ class AbiMethod:
         types_list = self.get_output_types_list()
         return eth_abi.decode_abi(types_list, encoded_data)
 
+    def decode_event_data(self, encoded_data: Union[str, EthHexBytes]):
+        return self.decode_input_data(encoded_data, include_function_selector=False)
+
     def encode_input_data(self, params: Union[list, tuple]) -> EthHexBytes:
-        types_list = self.get_input_types_list()
-        input_data = eth_abi.encode_abi(types_list, params)
+        encoded_input = self.encode_input_data_without_selector(params)
         selector = self.get_selector()
-        return selector + input_data
+        return selector + encoded_input
 
     def encode_input_data_without_selector(self, params: Union[list, tuple]) -> EthHexBytes:
-        encoded_params = self.encode_input_data(params)
-        return encoded_params[4:]
+        types_list = self.get_input_types_list()
+        encoded_raw = eth_abi.encode_abi(types_list, params)
+        return EthHexBytes(encoded_raw)
 
     def encode_output_data(self, params: Union[list, tuple]) -> EthHexBytes:
         types_list = self.get_input_types_list()
