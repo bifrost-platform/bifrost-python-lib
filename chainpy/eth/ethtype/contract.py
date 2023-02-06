@@ -189,4 +189,4 @@ class EthContract:
 
     def decode_event(self, event_name: str, data: EthHexBytes) -> tuple:
         abi = self.get_method_abi(event_name)
-        return abi.decode_input_data(data)
+        return abi.decode_event_data(data)
