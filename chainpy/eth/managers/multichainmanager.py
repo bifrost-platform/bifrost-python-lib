@@ -6,7 +6,7 @@ from .utils import merge_dict
 from ..ethtype.account import EthAccount
 from ..ethtype.amount import EthAmount
 from ..ethtype.chaindata import EthReceipt
-from bridgeconst.consts import Chain
+from bridgeconst.consts import Chain, Asset
 from ..ethtype.contract import EthContract
 from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.transaction import EthTransaction
@@ -143,12 +143,14 @@ class MultiChainManager:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.transfer_native_coin(to_addr, value)
 
-    def world_native_balance(self, chain_index: Chain, addr: EthAddress = None) -> EthAmount:
-        chain_manager = self.get_chain_manager_of(chain_index)
-
-        if addr is None:
-            addr = self.active_account.address
-        return chain_manager.native_balance(addr)
+    def world_balance(self, chain: Chain, asset: Asset = None, user_addr: EthAddress = None) -> EthAmount:
+        chain_manager = self.get_chain_manager_of(chain)
+        addr = user_addr if user_addr is not None else self.active_account.address
+        if asset is None or asset.is_coin():
+            return chain_manager.native_balance(user_addr)
+        else:
+            result = chain_manager.call_transaction(asset.name, "balanceOf", [addr.with_checksum()])[0]
+            return EthAmount(result, asset.decimal)
 
 
 class TestTransaction(unittest.TestCase):

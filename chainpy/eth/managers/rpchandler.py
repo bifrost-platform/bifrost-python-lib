@@ -226,12 +226,13 @@ class EthRpcClient:
         resp = self.send_request("eth_getBlockByNumber", ["latest", verbose])
         return EthBlock.from_dict(resp)
 
-    def eth_get_balance(self, address: EthAddress, height: Union[int, str] = "latest") -> EthAmount:
+    def eth_get_balance(self, address: EthAddress, height: Union[int, str] = "latest", matured: bool = False) -> EthAmount:
         """ queries matured balance of the user. """
         if not isinstance(address, EthAddress):
             raise Exception("address type must be \"EthAddress\" type")
-        matured_height = self._reduce_heights_to_matured_height(height)
-        resp = self.send_request("eth_getBalance", [address.hex(), matured_height])
+        if matured:
+            height = self._reduce_heights_to_matured_height(height)
+        resp = self.send_request("eth_getBalance", [address.hex(), height])
         return EthAmount(resp)
 
     def _get_block(self, method: str, params: list) -> Optional[EthBlock]:
