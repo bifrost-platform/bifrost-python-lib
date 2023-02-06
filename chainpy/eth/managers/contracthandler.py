@@ -169,7 +169,7 @@ class EthContractHandler(EthRpcClient):
             if emitter_addr != contract_address:
                 raise Exception("Topic and Contract address in the event are not matched.")
             # build event object and collect it (to return)
-            detected_event = DetectedEvent(self.chain_index, contract_name, event_name, raw_log)
+            detected_event = DetectedEvent(self.chain, contract_name, event_name, raw_log)
             historical_logs.append(detected_event)
 
         self.latest_height = to_block + 1

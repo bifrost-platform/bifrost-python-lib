@@ -1,4 +1,3 @@
-import logging
 from queue import PriorityQueue
 from typing import Union
 import time
@@ -7,7 +6,7 @@ from chainpy.eventbridge.chaineventabc import ChainEventABC
 from chainpy.eventbridge.periodiceventabc import PeriodicEventABC
 from chainpy.eventbridge.utils import timestamp_msec
 from chainpy.eth.managers.multichainmanager import MultiChainManager
-from chainpy.logger import Logger
+from chainpy.logger import global_logger
 
 
 class TimePriorityQueue:
@@ -24,7 +23,6 @@ class TimePriorityQueue:
 
     def __init__(self, max_size: int = -1):
         self.__queue = PriorityQueue(maxsize=max_size)
-        self.queue_logger = Logger("EventQueue", logging.INFO)
 
     def enqueue(self, event: Union[ChainEventABC, PeriodicEventABC]):
         # do nothing for a none event
@@ -62,8 +60,6 @@ class TimePriorityQueue:
 
         # re-enqueue if the item is not matured.
         self.enqueue(item)
-        remaining_time = item.time_lock - timestamp_msec()
-        self.queue_logger.debug("the soonest item will matured after {} secs".format(remaining_time // 1000))
         time.sleep(1)
         return None
 
@@ -74,7 +70,6 @@ class MultiChainMonitor(MultiChainManager):
         self.__queue = TimePriorityQueue()
         self.__events_types = dict()  # event_name to event_type
         self.__offchain_source_types = dict()
-        self.monitor_logger = Logger("Monitor", logging.INFO)
 
     @property
     def queue(self) -> TimePriorityQueue:
@@ -133,10 +128,10 @@ class MultiChainMonitor(MultiChainManager):
                 self.__queue.enqueue(chain_event)
 
                 if chain_event is not None:
-                    self.monitor_logger.formatted_log(
-                        relayer_addr=self.active_account.address,
-                        log_id=chain_event.summary(),
+                    global_logger.formatted_log(
+                        "Monitor",
+                        address=self.active_account.address,
                         related_chain=chain_event.on_chain,
-                        log_data="Detected"
+                        msg="{}:Detected".format(chain_event.summary())
                     )
             time.sleep(self.multichain_config["chain_monitor_period_sec"])

@@ -1,12 +1,12 @@
 import json
-import logging
 import unittest
+from json import JSONDecodeError
 
 import requests
 import time
 from typing import List, Optional, Union, Callable
 
-from .exceptions import raise_integrated_exception
+from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpcNoneResult, RpCMaxRetry
 from .utils import merge_dict
 from ..ethtype.amount import EthAmount
 from bridgeconst.consts import Chain
@@ -14,7 +14,7 @@ from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 from ..ethtype.chaindata import EthBlock, EthReceipt, EthLog
 from ..ethtype.exceptions import *
 from ..ethtype.transaction import EthTransaction
-from ...logger import Logger
+from ...logger import global_logger
 from ...prometheus_metric import PrometheusExporter
 
 RPC_RETRY_MAX_RETRY_NUM = 20
@@ -56,14 +56,14 @@ class EthRpcClient:
     def __init__(
             self,
             url_with_access_key: str,
-            chain_index: Chain = Chain.NONE,
+            chain: Chain = Chain.NONE,
             receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
             transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY
     ):
-        self._chain_index = chain_index
+        self.__chain = chain
         self.__url_with_access_key = url_with_access_key
         self.__receipt_max_try = DEFAULT_RECEIPT_MAX_RETRY if receipt_max_try is None else receipt_max_try
         self.__block_period_sec = DEFAULT_BLOCK_PERIOD_SECS if block_period_sec is None else block_period_sec
@@ -78,7 +78,6 @@ class EthRpcClient:
         if self.__url_with_access_key:
             resp = self.send_request("eth_chainId", [])
             self.__chain_id = int(resp, 16)
-        self.logger = Logger("RPC-Client", logging.INFO)
 
     @classmethod
     def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: Chain = None):
@@ -125,7 +124,7 @@ class EthRpcClient:
 
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
         if cnt > RPC_RETRY_MAX_RETRY_NUM:
-            raise Exception("Exceeded max re-try cnt on {}".format(self._chain_index))
+            raise RpCMaxRetry(self.chain, "Exceeded max re-try cnt")
 
         body = {
             "jsonrpc": "2.0",
@@ -135,43 +134,59 @@ class EthRpcClient:
         }
         headers = {'Content-type': 'application/json'}
         try:
-            PrometheusExporter.exporting_rpc_requested(self.chain_index)
+            PrometheusExporter.exporting_rpc_requested(self.chain)
             response = requests.post(self.url, json=body, headers=headers)
         except Exception as e:
-            PrometheusExporter.exporting_rpc_failed(self.chain_index)
-            self.logger.formatted_log(log_id="RPCException", related_chain=self._chain_index, log_data=str(e))
-            print("request will be re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec))
+            PrometheusExporter.exporting_rpc_failed(self.chain)
+            global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=str(e))
+
+            sleep_notify_msg = "re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec)
+            global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=sleep_notify_msg)
             time.sleep(self.__rpc_server_downtime_allow_sec)
-            print("let's try it again!")
+
+            resend_notify_msg = "re-send rpc request: {}".format(body)
+            global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=resend_notify_msg)
             return self.send_request(method, params)
 
         try:
             code = response.status_code
             if code < 200 or 400 < code:
-                PrometheusExporter.exporting_rpc_failed(self.chain_index)
-                raise Exception("OutOfStatusCode: code({}), msg({})".format(code, response.content))
+                PrometheusExporter.exporting_rpc_failed(self.chain)
+                raise RpcOutOfStatusCode(self.chain, "code({}), msg({})".format(code, response.content))
             else:
                 response_json = response.json()
-        except Exception as e:
-            PrometheusExporter.exporting_rpc_failed(self.chain_index)
-            self.logger.formatted_log(
-                log_id="RequestError",
-                related_chain=self._chain_index,
-                log_data=str(response)
-            )
+
+        except JSONDecodeError:
+            PrometheusExporter.exporting_rpc_failed(self.chain)
+            global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=str(response.content))
+
+            sleep_notify_msg = "re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec)
+            global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=sleep_notify_msg)
+
             time.sleep(RPC_RETRY_SLEEP_TIME_IN_SECS)
+
+            resend_notify_msg = "re-send rpc request: {}".format(body)
+            global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=resend_notify_msg)
             return self.send_request(method, params, cnt + 1)
 
-        if "result" in response_json.keys():
+        except Exception:
+            # just defensive code
+            raise Exception("Not handled error on {}: {}".format(self.chain.name, response.content))
+
+        if "result" in list(response_json.keys()):
             return response_json["result"]
+
+        # Evm error always gets caught here.
+        PrometheusExporter.exporting_rpc_failed(self.chain)
+        if "error" in list(response_json.keys()):
+            raise_integrated_exception(self.chain, error_json=response_json["error"])
         else:
-            PrometheusExporter.exporting_rpc_failed(self.chain_index)
-            raise_integrated_exception(response_json["error"])
+            raise Exception("Not handled error on {}: {}".format(self.chain.name, response.content))
 
     @property
-    def chain_index(self) -> Chain:
+    def chain(self) -> Chain:
         """ return chain index specified from the configuration. """
-        return self._chain_index
+        return self.__chain
 
     @property
     def chain_id(self) -> int:
@@ -292,7 +307,6 @@ class EthRpcClient:
             receipt = get_receipt_func(tx_hash)
             if receipt is not None:
                 return receipt
-            print("sleep {} sec".format(self.__block_period_sec / 2))  # TODO remove
             time.sleep(self.__block_period_sec / 2)  # wait half block
         return None
 
@@ -367,25 +381,12 @@ class EthRpcClient:
 
 class TestTransaction(unittest.TestCase):
     def setUp(self) -> None:
+        global_logger.init(log_file_name="test.log")
         self.cli = EthRpcClient.from_config_files(
             "configs/entity.relayer.json",
             "configs/entity.relayer.private.json",
-            chain_index=Chain.BFC_TEST
+            chain_index=Chain.BFC_MAIN
         )
-        self.target_tx_hash = EthHashBytes(0xfb6ceb412ae267643d45b28516565b1ab07f4d16ade200d7e432be892add1448)
-        self.serialized_tx = "0xf90153f9015082bfc082301f0186015d3ef7980183036e54947abd332cf88ca31725fffb21795f90583744535280b901246196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874ec0"
 
-    def test_serialize_tx_from_rpc(self):
-        transaction = self.cli.eth_get_transaction_by_hash(self.target_tx_hash)
-        self.assertEqual(transaction.serialize(), self.serialized_tx)
-
-    def test_serialize_tx_built(self):
-        tx_obj: EthTransaction = EthTransaction.init(
-            int("0xbfc0", 16),  # chain_id
-            EthAddress("0x7abd332cf88ca31725fffb21795f905837445352"),  # to
-            data=EthHexBytes(
-                "0x6196d920000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001524d2eadae57a7f06f100476a57724c1295c8fe99db52b6af3e3902cc8210e97000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000b99000000000000000000000000000000000000000000000000000000000000000001000000000000000000062bf8e916ee7d6d68632b2ee0d6823a5c9a7cd69c874e")
-        )
-        tx_obj.set_nonce(int("0x301f", 16)).set_gas_prices(int("0x015d3ef79801", 16), int("0x01", 16)).set_gas_limit(
-            int("0x036e54", 16))
-        self.assertEqual(tx_obj.serialize(), self.serialized_tx)
+    def test_rpc_non_result_exception(self):
+        self.assertRaises(RpcNoneResult, self.cli.eth_get_block_by_hash, (EthHashBytes("0x" + "00" * 32)))

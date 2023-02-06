@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 import threading
@@ -10,7 +9,7 @@ from bridgeconst.consts import Chain
 
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.exceptions import RpcEVMError
-from ..logger import Logger
+from ..logger import global_logger
 
 from .utils import timestamp_msec
 from .periodiceventabc import PeriodicEventABC
@@ -33,6 +32,8 @@ class KeyValueCache:
             raise Exception("Not allowed type of value: expected({}), actual({})".format(self.value_type, type(value)))
 
     def add_value(self, key: int, value: Any):
+        if value is None:
+            return
         self._value_type_check(value)
         self.cache[key] = value
         self.latest_item = self._sort_dict()
@@ -67,12 +68,6 @@ class EventBridge(MultiChainMonitor):
     def __init__(self, multichain_config: dict, cache_value_type: Type = int, max_length: int = 100):
         super().__init__(multichain_config)
         self.cache = KeyValueCache(cache_value_type, max_length)
-
-        self.consumer_logger = Logger("Consumer", logging.INFO)
-        self.receipt_checker_logger = Logger("Receipt", logging.INFO)
-        self.tx_sender_logger = Logger("FailToSendTx", logging.INFO)
-        self.evm_logger = Logger("Evm", logging.DEBUG)
-        self.bridge_logger = Logger("Bridge", logging.INFO)
 
     def has_key(self, key: int) -> bool:
         if self.cache is None:
@@ -117,20 +112,20 @@ class EventBridge(MultiChainMonitor):
             tx = self.world_build_transaction(dst_chain, contract_name, method_name, params)
             tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
 
-            self.consumer_logger.formatted_log(
-                relayer_addr=self.active_account.address,
-                log_id=event.summary(),
+            global_logger.formatted_log(
+                "Consumer",
+                address=self.active_account.address,
                 related_chain=dst_chain,
-                log_data="txHash({}):nonce({})".format(tx_hash.hex(), tx.nonce)
+                msg="{}:txHash({}):nonce({})".format(event.summary(), tx_hash.hex(), tx.nonce)
             )
 
             if tx_hash == EthHashBytes.default():
                 """ expected fee issue """
-                self.tx_sender_logger.formatted_log(
-                    relayer_addr=self.active_account.address,
-                    log_id=event.summary(),
+                global_logger.formatted_log(
+                    "Consumer",
+                    address=self.active_account.address,
                     related_chain=dst_chain,
-                    log_data="Zero txHash"
+                    msg="{}:ZeroTxHash".format(event.summary())
                 )
                 event.time_lock = timestamp_msec() + 3000
                 self.queue.enqueue(event)
@@ -142,11 +137,11 @@ class EventBridge(MultiChainMonitor):
 
         except RpcEVMError as e:
             # not-consume user nonce.
-            self.evm_logger.formatted_log(
-                relayer_addr=self.active_account.address,
-                log_id=event.summary(),
+            global_logger.formatted_log(
+                "Evm",
+                address=self.active_account.address,
                 related_chain=dst_chain,
-                log_data="evm-error:" + str(e)
+                msg="{}:EvmError:{}".format(event.summary(), str(e))
             )
             # TODO does not update event when reverted poll filtered error occurs
             updated_event = event.handle_tx_result_fail()
@@ -168,15 +163,21 @@ class EventBridge(MultiChainMonitor):
         else:
             raise Exception("Not allowed receipt status")
 
-        self.receipt_checker_logger.formatted_log(
-            relayer_addr=self.active_account.address,
-            log_id=event.summary(),
+        global_logger.formatted_log(
+            "Receipt",
+            address=self.active_account.address,
             related_chain=receipt_params.on_chain,
-            log_data="receipt({}):{}".format(receipt_params.tx_hash.hex(), log_status)
+            msg="{}:receipt({}):{}".format(event.summary(), receipt_params.tx_hash.hex(), log_status)
         )
 
         # restart relayer after 60 secs
         if log_status == "no-receipt":
+            global_logger.formatted_log(
+                "Receipt",
+                address=self.active_account.address,
+                related_chain=receipt_params.on_chain,
+                msg="{}:RestartAfter{}Second".format(event.summary(), 60)
+            )
             sleep(60)
             os.execl(sys.executable, sys.executable, *sys.argv)
 
@@ -209,7 +210,7 @@ class EventBridge(MultiChainMonitor):
         An entry method to run relayer including runners: chain monitor and transaction sender
         """
         # bootstrap historical event; result is dummy return for process sync.
-        result = self.bootstrap_chain_events()
+        _ = self.bootstrap_chain_events()
 
         # set oracle task to relay
         self._generate_periodic_offchain_task()
@@ -226,26 +227,29 @@ class EventBridge(MultiChainMonitor):
             monitor_alive = monitor_th.is_alive()
             PrometheusExporter.exporting_thread_alive("monitor", monitor_alive)
             if not monitor_alive:
-                self.bridge_logger.formatted_log(
-                    relayer_addr=self.active_account.address,
-                    log_id="ThreadHealthCheck",
-                    log_data="Monitor thread has been dead. re-boot after 60 secs")
+                global_logger.formatted_log(
+                    "Bridge",
+                    address=self.active_account.address,
+                    msg="ThreadHealthCheck:Monitor thread has been dead. re-boot after 60 secs"
+                )
                 sleep(60)
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
             sender_alive = sender_th.is_alive()
             PrometheusExporter.exporting_thread_alive("sender", sender_alive)
             if not sender_alive:
-                self.bridge_logger.formatted_log(
-                    relayer_addr=self.active_account.address,
-                    log_id="ThreadHealthCheck",
-                    log_data="Sender thread has been dead. re-boot after 60 secs")
+                global_logger.formatted_log(
+                    "Bridge",
+                    address=self.active_account.address,
+                    msg="ThreadHealthCheck:Sender thread has been dead. re-boot after 60 secs"
+                )
                 sleep(60)
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
-            self.bridge_logger.formatted_log(
-                relayer_addr=self.active_account.address,
-                log_id="ThreadHealthCheck",
-                log_data="Check the survival of the threads every 60 seconds.")
+            global_logger.formatted_log(
+                "Bridge",
+                address=self.active_account.address,
+                msg="ThreadHealthCheck:Check the survival of the threads every 60 seconds."
+            )
 
             sleep(120)

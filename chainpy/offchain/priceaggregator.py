@@ -18,6 +18,7 @@ from ..eth.ethtype.amount import EthAmount
 from .chainlinkapi import ChainlinkApi
 from .coingeckoapi import CoingeckoApi
 from .upbitapi import UpbitApi
+from ..logger import global_logger
 
 
 class PriceApiIdx(Enum):
@@ -123,7 +124,11 @@ class PriceOracleAgg:
             try:
                 symbol_to_pv_from_api = self.apis[api_idx].get_current_prices_with_volumes(supporting_symbols)
             except Exception as e:
-                print("[Err] Api Error: {}\n  - msg: {}".format(api_idx.name, e))
+                # TODO log
+                global_logger.formatted_log(
+                    "PriceAPI",
+                    msg="{}\n  - msg: {}".format(api_idx.name, e)
+                )
                 continue
 
             for symbol, pv in symbol_to_pv_from_api.items():
