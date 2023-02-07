@@ -136,6 +136,12 @@ class EthRpcClient:
         try:
             PrometheusExporter.exporting_rpc_requested(self.chain)
             response = requests.post(self.url, json=body, headers=headers)
+
+            code = response.status_code
+            if code < 200 or 400 < code:
+                PrometheusExporter.exporting_rpc_failed(self.chain)
+                raise RpcOutOfStatusCode(self.chain, "code({}), msg({})".format(code, response.content))
+
         except Exception as e:
             PrometheusExporter.exporting_rpc_failed(self.chain)
             global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=str(e))
@@ -149,13 +155,7 @@ class EthRpcClient:
             return self.send_request(method, params)
 
         try:
-            code = response.status_code
-            if code < 200 or 400 < code:
-                PrometheusExporter.exporting_rpc_failed(self.chain)
-                raise RpcOutOfStatusCode(self.chain, "code({}), msg({})".format(code, response.content))
-            else:
-                response_json = response.json()
-
+            response_json = response.json()
         except JSONDecodeError:
             PrometheusExporter.exporting_rpc_failed(self.chain)
             global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=str(response.content))
