@@ -105,3 +105,10 @@ class EthReceipt:
     def __post_init__(self):
         if self.type is None:
             self.type = 0
+
+    def get_log_data_by_topic(self, topic: EthHashBytes) -> Optional[EthHexBytes]:
+        for log in self.logs:
+            for topic_in_log in log.topics:
+                if topic == topic_in_log:
+                    return log.data
+        return None
