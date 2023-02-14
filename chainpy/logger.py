@@ -16,7 +16,7 @@ class LoggerConfig:
             level: int = logging.DEBUG,
             log_format: str = "%(message)s",
             log_file_name: str = None,
-            backup_count: int = 10,
+            backup_count: int = 0,
             when: int = "H",
             interval: int = 1,
     ):
@@ -32,7 +32,7 @@ class LoggerConfig:
             level: int = logging.DEBUG,
             log_format: str = "%(message)s",
             log_file_name: str = None,
-            backup_count: int = 10,
+            backup_count: int = 0,
             when: int = "H",
             interval: int = 1,
     ):
