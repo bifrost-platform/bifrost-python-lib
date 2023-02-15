@@ -30,6 +30,9 @@ class EthHexBytes(bytes):
     def __str__(self) -> str:
         return self.hex()
 
+    def __hash__(self) -> int:
+        return self.int()
+
     def __eq__(self, other):
         if isinstance(other, EthHexBytes):
             return bytes(self) == bytes(other)
