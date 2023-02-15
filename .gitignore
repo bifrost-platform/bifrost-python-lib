@@ -131,3 +131,5 @@ dmypy.json
 .idea
 
 configs/
+
+tests/configs-testnet/entity.relayer.private.json
