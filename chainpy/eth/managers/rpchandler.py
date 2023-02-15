@@ -320,11 +320,21 @@ class EthRpcClient:
 
         amended_block_nums = self._reduce_heights_to_matured_height([from_block, to_block])
 
+        topic_hexes = list()
+        for topic in topics:
+            if isinstance(topic, list):
+                item = list()
+                for tp in topic:
+                    item.append(tp.hex())
+                topic_hexes.append(item)
+            else:
+                topic_hexes.append(topic.hex())
+
         params: list = [{
             "fromBlock": amended_block_nums[0],
             "toBlock": amended_block_nums[1],
             "address": [address.with_checksum() for address in addresses],
-            "topics": [topic.hex() for topic in topics]
+            "topics": topic_hexes
         }]
         resp = self.send_request("eth_getLogs", params)
         try:
