@@ -226,7 +226,8 @@ class EthRpcClient:
         resp = self.send_request("eth_getBlockByNumber", ["latest", verbose])
         return EthBlock.from_dict(resp)
 
-    def eth_get_balance(self, address: EthAddress, height: Union[int, str] = "latest", matured: bool = False) -> EthAmount:
+    def eth_get_balance(self, address: EthAddress, height: Union[int, str] = "latest",
+                        matured: bool = False) -> EthAmount:
         """ queries matured balance of the user. """
         if not isinstance(address, EthAddress):
             raise Exception("address type must be \"EthAddress\" type")
@@ -313,7 +314,8 @@ class EthRpcClient:
 
     def eth_get_logs(self,
                      from_block: int, to_block: int,
-                     addresses: List[EthAddress], topics: List[EthHashBytes]) -> List[EthLog]:
+                     addresses: List[EthAddress],
+                     topics: List[Union[EthHashBytes, List[EthHashBytes]]]) -> List[EthLog]:
         """ find logs of the event (which have topics) from multiple contracts """
         if from_block > to_block:
             raise Exception("from_block should be less than to_block")

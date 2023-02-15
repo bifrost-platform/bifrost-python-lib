@@ -5,7 +5,7 @@
     "block_aging_period": 2,
     "transaction_block_delay": 5,
     "receipt_max_try": 20,
-    "max_log_num": 1000,
+    "max_log_num": 2000,
     "rpc_server_downtime_allow_sec": 180,
     "fee_config": {
         "type": 2,
