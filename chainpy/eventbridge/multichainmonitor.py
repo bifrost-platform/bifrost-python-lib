@@ -102,7 +102,7 @@ class MultiChainMonitor(MultiChainManager):
         heights = dict()
         for chain_index in self.supported_chain_list:
             chain_manager = self.get_chain_manager_of(chain_index)
-            current_block_height = chain_manager.eth_get_matured_block_number()
+            current_block_height = chain_manager.eth_get_latest_block_number(matured_only=True)
             heights[chain_index] = [chain_manager.latest_height, current_block_height]
             chain_manager.latest_height = current_block_height
 

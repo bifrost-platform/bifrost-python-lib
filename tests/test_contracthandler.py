@@ -1,12 +1,14 @@
 import unittest
+from typing import List
 
 from bridgeconst.consts import Chain
 
+from chainpy.eth.ethtype.chaindata import EthLog
 from chainpy.eth.ethtype.hexbytes import EthAddress, EthHashBytes
-from chainpy.eth.managers.contracthandler_staged import EthContractHandler
+from chainpy.eth.managers.contracthandler import EthContractHandler
 
 
-class TestTransaction(unittest.TestCase):
+class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
         self.cli = EthContractHandler.from_config_files(
             "./configs-event-test/entity.test.json",
@@ -21,6 +23,8 @@ class TestTransaction(unittest.TestCase):
         self.contract_name2 = "test_contract2"
         self.event_name2 = "TestEvent2"
         self.topic2 = EthHashBytes("0xc98f871161824f7ebd6f185b9c0d6ec054c7d5c99a55182109148b69f67c59ec")
+
+        self.from_block, self.to_block = 3610000, 3636650
 
     def test_properties(self):
         self.assertEqual(self.cli.latest_height, 2883)
@@ -53,13 +57,34 @@ class TestTransaction(unittest.TestCase):
         contract_addresses = self.cli.get_emitter_addresses()
         self.assertEqual(contract_addresses, [self.contract_addr1, self.contract_addr2])
 
-        topics = self.cli.get_topics()
+        topics = self.cli.get_every_topics()
         self.assertEqual(topics, [self.topic1, self.topic2])
 
-    def test_small_ranged_collect_events(self):
-        logs = self.cli.small_ranged_collect_events(3610000, 3610500)
+    def test_collect_event_in_limited_range(self):
+        detected_events = self.cli.collect_event_in_limited_range(self.event_name1, self.from_block, self.to_block)
+        for detected_event in detected_events:
+            self.assertEqual(detected_event.event_name, self.event_name1)
+
+        detected_events = self.cli.collect_event_in_limited_range(self.event_name2, self.from_block, self.to_block)
+        for detected_event in detected_events:
+            self.assertEqual(detected_event.event_name, self.event_name2)
+
+    def _check_logs(self, logs: List[EthLog]):
+        self.assertEqual(len(logs), 8)
         for log in logs:
             self.assertTrue(log.contract_name in [self.contract_name1, self.contract_name2])
             self.assertTrue(log.topic in [self.topic1, self.topic2])
             self.assertTrue(log.event_name in [self.event_name1, self.event_name2])
-            self.assertTrue(3610000 < log.block_number < 3610500)
+            self.assertTrue(self.from_block <= log.block_number <= self.to_block)
+
+    def test_collect_every_event_in_limited_range(self):
+        before_call_num = self.cli.call_num
+        logs = self.cli.collect_every_event_in_limited_range(self.from_block, self.to_block)
+        self._check_logs(logs)
+        self.assertEqual(self.cli.call_num - before_call_num, 2)
+
+    def test_collect_every_event(self):
+        before_call_num = self.cli.call_num
+        logs = self.cli.collect_every_event(self.from_block, self.to_block)
+        self._check_logs(logs)
+        self.assertEqual(self.cli.call_num - before_call_num, 28)
