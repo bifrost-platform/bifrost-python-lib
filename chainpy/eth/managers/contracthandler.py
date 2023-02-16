@@ -136,7 +136,7 @@ class EthContractHandler(EthRpcClient):
         data = self._event_db.get(event_name)
         if data is None:
             return list()
-        return [data["contract"] for data in self._event_db[event_name]]
+        return [event["contract"] for event in data]
 
     def get_contracts_name_by_event_name(self, event_name: str) -> List[str]:
         contracts = self.get_contracts_by_event_name(event_name)
