@@ -68,11 +68,9 @@ class EthContractHandler(EthRpcClient):
         if events is not None and isinstance(events, list):
             for event in events:
                 # Check that each event belongs to a known contract.
-                contract_name = event["contract_name"]
+                event_name, contract_name = event["event_name"], event["contract_name"]
                 if self._contracts.get(contract_name) is None:
                     raise Exception("Event of unknown contract: {}".format(event))
-
-                event_name, contract_name = event["event_name"], event["contract_name"]
                 data = {
                     "contract": self._contracts[contract_name],
                     "topic": self._contracts[contract_name].get_method_abi(event_name).get_topic()
