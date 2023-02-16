@@ -253,6 +253,10 @@ class EthContractHandler(EthRpcClient):
     def collect_unchecked_single_chain_events(self, matured_only: bool = True) -> List[DetectedEvent]:
         """ collect every type of events until the current block (at the single blockchain) """
         current_height = self.eth_get_latest_block_number(matured_only=matured_only)
+
+        if self.latest_height + 1 > current_height:
+            return list()
+
         historical_events = self.collect_every_event(self.latest_height + 1, current_height)
         self.latest_height = current_height
 
