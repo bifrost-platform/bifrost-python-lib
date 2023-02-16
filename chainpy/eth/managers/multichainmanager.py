@@ -119,12 +119,12 @@ class MultiChainManager:
         chain_manager = self.get_chain_manager_of(chain_index)
         return chain_manager.eth_receipt_without_wait(tx_hash)
 
-    def collect_unchecked_multichain_event_in_range(self, event_name: str, _range: Dict[Chain, List[int]]):
+    def collect_unchecked_multichain_event_in_range(self, _range: Dict[Chain, List[int]]):
         unchecked_events = list()
         for chain_index in self.__supported_chains:
             chain_manager = self.get_chain_manager_of(chain_index)
             from_block, to_block = _range[chain_index][0], _range[chain_index][1]
-            unchecked_events += chain_manager.ranged_collect_events(event_name, from_block, to_block)
+            unchecked_events += chain_manager.collect_every_event(from_block, to_block)
         return unchecked_events
 
     def collect_unchecked_multichain_events(self) -> List[DetectedEvent]:

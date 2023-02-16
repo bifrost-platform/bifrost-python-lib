@@ -51,7 +51,7 @@ class TestContractHandler(unittest.TestCase):
         topic = self.cli.get_topic_by_event_name(self.event_name1)
         self.assertEqual(topic, self.topic1)
 
-        event_name = self.cli.get_event_names_by_topic(topic)
+        event_name = self.cli.get_event_name_by_topic(topic)
         self.assertEqual(event_name, self.event_name1)
 
         contract_addresses = self.cli.get_emitter_addresses()

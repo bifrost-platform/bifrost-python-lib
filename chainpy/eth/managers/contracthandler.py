@@ -158,7 +158,7 @@ class EthContractHandler(EthRpcClient):
                 topics.append(item["topic"])
         return sorted(list(set(topics)))
 
-    def get_event_names_by_topic(self, topic: EthHashBytes) -> Optional[str]:
+    def get_event_name_by_topic(self, topic: EthHashBytes) -> Optional[str]:
         topic_hex = topic.hex()
         for event_name, data in self._event_db.items():
             for item in data:
@@ -204,7 +204,7 @@ class EthContractHandler(EthRpcClient):
 
             # Find information related to the event log.
             contract_name = self.get_contract_by_addr(fetched_contract_address).contract_name
-            event_name = self.get_event_names_by_topic(fetched_topic)
+            event_name = self.get_event_name_by_topic(fetched_topic)
 
             # build event object and collect it (to return)
             detected_event = DetectedEvent(self.chain, contract_name, event_name, log)
