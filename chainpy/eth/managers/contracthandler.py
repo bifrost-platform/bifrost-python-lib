@@ -17,11 +17,39 @@ DEFAULT_MAX_LOG_NUM = 1000
 
 
 class EthContractHandler(EthRpcClient):
+    """Ethereum-style contract handler
+
+    EthContractHandler stores information on contracts and events entered through the config,
+    and provides a number of lookup methods. In particular, it provides methods that look up
+    all kinds of registered events in the blockchain at once.
+
+    Args:
+        url_with_access_key: RPC endpoint url
+        contracts: a list of contract dictionaries (the structure can be found below)
+        abi_dir: directory path containing abi files. it is required, if contract dictionary has "abi_file" field.
+        events: a list of event dictionaries (the structure can be found below)
+        max_log_num: maximum lookup range for the eth_getLog.
+
+    Note:
+        contract_dictionary {
+            "name": "<contract_name_string>",
+            "address": "<address_hex_string_with_0x_prefix>",
+            "abi_path": "<abi_file_path_string>" or "abi_file": "<abi_file_name>" # at least one required
+            "deploy_height": "<deploy_height_int>" # optional
+        }
+
+        event_dictionary {
+            "contract_name": "<event_emitting_contract_name_string>",
+            "event_name":  "<event_name_string>"
+        }
+
+        Information on the remaining parameters is found in the EthRpcClient.
+    """
     def __init__(
             self,
             url_with_access_key: str,
-            contracts: List[dict],
-            chain_index: Chain,
+            contracts: List[Dict[str, str | int]],
+            chain: Chain,
             abi_dir: str = None,
             receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
@@ -34,7 +62,7 @@ class EthContractHandler(EthRpcClient):
     ):
         super().__init__(
             url_with_access_key,
-            chain_index,
+            chain,
             receipt_max_try,
             block_period_sec,
             block_aging_period,
@@ -42,7 +70,7 @@ class EthContractHandler(EthRpcClient):
             transaction_commit_multiplier
         )
 
-        self._matured_latest_height = DEFAULT_LATEST_HEIGHT if latest_height is None else latest_height
+        self._latest_height = DEFAULT_LATEST_HEIGHT if latest_height is None else latest_height
         self._max_log_num = DEFAULT_MAX_LOG_NUM if max_log_num is None else max_log_num
 
         self._contracts = dict()
@@ -55,7 +83,9 @@ class EthContractHandler(EthRpcClient):
                 abi_path = abi_dir + contract_dict.get("abi_file")
 
             # init contract_obj of the contract
-            contract_obj = EthContract.from_abi_file(contract_dict["name"], contract_dict["address"], abi_path)
+            contract_obj = EthContract.from_abi_file(
+                contract_dict["name"], EthAddress(contract_dict["address"]), abi_path
+            )
 
             # assume that every contract has a different name.
             contract_name = contract_dict["name"]
@@ -81,15 +111,16 @@ class EthContractHandler(EthRpcClient):
                     self._event_db[event_name].append(data)
 
     @classmethod
-    def from_config_dict(cls, config: dict, private_config: dict = None, chain_index: Chain = None):
+    def from_config_dict(cls, config: dict, private_config: dict = None, chain: Chain = None):
+        """ Initiate class after combining public and private configurations """
         merged_config = merge_dict(config, private_config)
         if merged_config.get("chain_name") is not None:
             # In the case of being entered chain_config
-            chain_index = Chain.from_name(merged_config.get("chain_name").upper())
+            chain = Chain.from_name(merged_config.get("chain_name").upper())
             chain_config = merged_config
-        elif chain_index is not None:
+        elif chain is not None:
             # In the case of being entered multichain_config
-            chain_config = merged_config.get(chain_index.name)
+            chain_config = merged_config.get(chain.name)
             if chain_config is None:
                 # there is no target chain-config in multichain_config
                 raise Exception("should be inserted chain config")
@@ -99,7 +130,7 @@ class EthContractHandler(EthRpcClient):
         return cls(
             url_with_access_key=chain_config["url_with_access_key"],
             contracts=chain_config["contracts"],
-            chain_index=chain_index,
+            chain=chain,
             abi_dir=chain_config.get("abi_dir"),
             receipt_max_try=chain_config.get("receipt_max_try"),
             block_period_sec=chain_config.get("block_period_sec"),
@@ -113,14 +144,15 @@ class EthContractHandler(EthRpcClient):
 
     @property
     def latest_height(self) -> int:
-        return self._matured_latest_height
+        return self._latest_height
 
     @latest_height.setter
     def latest_height(self, height: int):
-        self._matured_latest_height = height
+        self._latest_height = height
 
     @property
     def max_log_num(self) -> int:
+        """ Maximum lookup range for the eth_getLog. """
         return self._max_log_num
 
     def get_contract_by_name(self, contract_name: str) -> Optional[EthContract]:
@@ -165,6 +197,7 @@ class EthContractHandler(EthRpcClient):
         return None
 
     def get_emitter_addresses(self, event_name: str = None) -> List[EthAddress]:
+        """ Returns all contract addresses related to all events specified in config. """
         addresses = list()
         for _event_name, data in self._event_db.items():
             if event_name is not None and event_name != _event_name:
@@ -193,6 +226,7 @@ class EthContractHandler(EthRpcClient):
 
     def _check_fetched_event(
             self, logs: List[EthLog], emitter_addresses: List[EthAddress]) -> List[DetectedEvent]:
+        """ Verify that the fetched event is emitted by a legitimate contract."""
         historical_logs = list()
         for log in logs:
             # check weather the log was emitted by one of target contracts
@@ -211,7 +245,7 @@ class EthContractHandler(EthRpcClient):
         return historical_logs
 
     def collect_event_in_limited_range(self, event_name: str, from_block: int, to_block: int) -> List[DetectedEvent]:
-        """ Collect the specific event """
+        """Collect the specific event. The input range [from_block, to_block] is used as it is without deformation."""
         if to_block < from_block:
             raise Exception("from_block is bigger than to_block")
         emitter_addresses, topic = self.get_emitter_addresses(event_name), self.get_topic_by_event_name(event_name)
@@ -219,7 +253,10 @@ class EthContractHandler(EthRpcClient):
         return self._check_fetched_event(logs, emitter_addresses)
 
     def collect_every_event_in_limited_range(self, from_block: int, to_block: int) -> List[DetectedEvent]:
-        """ Collect every event specified in config. """
+        """
+        Collect every event specified in config.
+        The input range [from_block, to_block] is used as it is without deformation.
+        """
         if to_block < from_block:
             raise Exception("from_block is bigger than to_block")
 
@@ -230,7 +267,11 @@ class EthContractHandler(EthRpcClient):
 
     def collect_every_event(
             self, from_block: int, to_block: int) -> List[DetectedEvent]:
-        """  collect the event in specific range (at the single blockchain) """
+        """
+        Collect every event specified in config.
+        If the entered range [from_block, to_block] is greater than max_log_num,
+        the event is collected several times by dividing it into smaller fragments than max_log_num.
+        """
         if to_block < from_block:
             raise Exception("from_block is bigger than to_block")
 
@@ -249,7 +290,9 @@ class EthContractHandler(EthRpcClient):
         return historical_logs
 
     def collect_unchecked_single_chain_events(self, matured_only: bool = True) -> List[DetectedEvent]:
-        """ collect every type of events until the current block (at the single blockchain) """
+        """
+        Collect all kinds of events (specified in config), from latest_height to current_height.
+        """
         current_height = self.eth_get_latest_block_number(matured_only=matured_only)
 
         if self.latest_height + 1 > current_height:

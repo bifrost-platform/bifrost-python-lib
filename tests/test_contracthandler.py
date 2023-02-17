@@ -26,6 +26,8 @@ class TestContractHandler(unittest.TestCase):
 
         self.from_block, self.to_block = 3610000, 3636650
 
+        self.cli.latest_height = self.from_block
+
     def test_properties(self):
         self.assertEqual(self.cli.latest_height, 2883)
         self.assertEqual(self.cli.max_log_num, 2000)
@@ -84,7 +86,17 @@ class TestContractHandler(unittest.TestCase):
         self.assertEqual(self.cli.call_num - before_call_num, 2)
 
     def test_collect_every_event(self):
+        self.assertNotEqual(self.to_block, self.cli.latest_height)
+
         before_call_num = self.cli.call_num
         logs = self.cli.collect_every_event(self.from_block, self.to_block)
         self._check_logs(logs)
         self.assertEqual(self.cli.call_num - before_call_num, 28)
+
+        self.assertNotEqual(self.to_block, self.cli.latest_height)
+
+    def test_collect_unchecked_single_chain_events(self):
+        before_height = self.cli.latest_height
+        logs = self.cli.collect_unchecked_single_chain_events(matured_only=True)
+        self._check_logs(logs)
+        self.assertTrue(before_height < self.cli.latest_height)
