@@ -19,6 +19,7 @@ from chainpy.eth.ethtype.exceptions import EthTypeError
 from chainpy.eth.ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from chainpy.eth.ethtype.utils import is_hex, keccak_hash
 
+# Type 2 transaction
 dynamic_unsigned_transaction_fields = (
     ('chainId', big_endian_int),
     ('nonce', big_endian_int),
@@ -37,6 +38,7 @@ dynamic_unsigned_transaction_serializer = type(
     },
 )
 
+# Type 1 transaction
 access_list_unsigned_transaction_fields = (
     ('chainId', big_endian_int),
     ('nonce', big_endian_int),
@@ -86,7 +88,7 @@ class EthTransaction:
     creates: Optional[EthAddress] = field(metadata=EthAddrMeta, default_factory=str)
     type: Optional[int] = field(metadata=IntegerMeta, default_factory=int)
 
-    # type 2 only
+    # type 1 and 2 only
     chain_id: Optional[int] = field(metadata=IntegerMeta, default_factory=int)
     access_list: Optional[List[Dict[str, Any]]] = field(default_factory=list)
 
@@ -97,10 +99,10 @@ class EthTransaction:
         if EthHashBytes.default() == self.block_hash:
             self.type = -1
 
-        if self.access_list == []:
-            self.type = 0
+        if self.max_priority_fee_per_gas * self.max_fee_per_gas != 0:
+            self.type = 2
         else:
-            self.type = 1 if self.max_fee_per_gas == 0 and self.max_priority_fee_per_gas == 0 else 2
+            self.type = 0
 
     @classmethod
     def init(cls,
@@ -120,40 +122,51 @@ class EthTransaction:
             tx_dict["sender"] = sender.hex().lower()
         return EthTransaction.from_dict(tx_dict)
 
+    def type_negative_one_tx_exception(self):
+        if self.type == -1:
+            raise Exception("Type -1 transaction can not have any field")
+
     def set_nonce(self, nonce: int):
+        self.type_negative_one_tx_exception()
         self.nonce = nonce
         return self
 
     def set_gas_limit(self, gas_limit: Union[int, str]):
+        self.type_negative_one_tx_exception()
         self.gas = gas_limit if isinstance(gas_limit, int) else hex(gas_limit)
         return self
 
     def set_gas_price(self, gas_price: int):
         """ set fee parameters for type0 or type1 transaction """
-        self.type = self.type if self.type == 1 else 0
+        self.type_negative_one_tx_exception()
+        if self.type == 0 or self.type == 2:
+            self.type = 0
+        elif self.type == 1:
+            self.type = 1
+        else:
+            raise Exception("Invalid transaction type: {}".format(self.type))
+
         self.gas_price = gas_price
         return self
 
     def set_gas_prices(self, max_fee_per_gas: int, max_priority_fee_per_gas: int):
         """ set fee parameters for type2 """
+        self.type_negative_one_tx_exception()
         self.type = 2
         self.max_fee_per_gas = max_fee_per_gas
         self.max_priority_fee_per_gas = max_priority_fee_per_gas
         return self
 
     def set_access_list(self, access_list: list):
-        if access_list == []:
-            return self
+        if access_list is None or not isinstance(access_list, list):
+            raise Exception("access_list must be list type, but {}".format(type(access_list)))
+        self.type_negative_one_tx_exception()
         self.type = max(self.type, 1)
         self.access_list = access_list
         return self
 
     def set_chain_id(self, chain_id: int):
-        if self.type == -1:
-            raise Exception("can not set chain id")
-
-        if self.type is None or self.type == 0:
-            self.type = 1
+        self.type_negative_one_tx_exception()
         self.chain_id = chain_id
         return self
 

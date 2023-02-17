@@ -1,11 +1,12 @@
 from queue import PriorityQueue
-from typing import Union
+from typing import Union, List, Tuple
 import time
 
 from chainpy.eventbridge.chaineventabc import ChainEventABC
 from chainpy.eventbridge.periodiceventabc import PeriodicEventABC
 from chainpy.eventbridge.utils import timestamp_msec
 from chainpy.eth.managers.multichainmanager import MultiChainManager
+from chainpy.eth.managers.eventobj import DetectedEvent
 from chainpy.logger import global_logger
 
 
@@ -98,20 +99,37 @@ class MultiChainMonitor(MultiChainManager):
             source_obj = source_type(self)
             self.__queue.enqueue(source_obj)
 
+    @staticmethod
+    def extract_specific_events(
+            event_name: str, detected_events: List[DetectedEvent]
+    ) -> Tuple[List[DetectedEvent], List[DetectedEvent]]:
+        targets, remainders = list(), list()
+        for detected_event in detected_events:
+            if detected_event.event_name == event_name:
+                targets.append(detected_event)
+            else:
+                remainders.append(detected_event)
+        return targets, remainders
+
     def bootstrap_chain_events(self):
-        heights = dict()
+        # collect events of every type on every chain
+        detected_events = list()
         for chain_index in self.supported_chain_list:
             chain_manager = self.get_chain_manager_of(chain_index)
-            current_block_height = chain_manager.eth_get_matured_block_number()
-            heights[chain_index] = [chain_manager.latest_height, current_block_height]
-            chain_manager.latest_height = current_block_height
+            start_height = chain_manager.latest_height
+            detected_events += chain_manager.collect_unchecked_single_chain_events(matured_only=True)
+            global_logger.formatted_log(
+                "BootStrap",
+                address=chain_manager.account.address,
+                related_chain=chain_index,
+                msg="CollectEvents:from({}):to({})".format(start_height, chain_manager.latest_height)
+            )
 
         for event_name, event_class in self.__events_types.items():
-            not_handled_event_objs = event_class.bootstrap(self, heights)
-            if not not_handled_event_objs:
-                continue
-            for not_handled_event_obj in not_handled_event_objs:
-                self.__queue.enqueue(not_handled_event_obj)
+            target_events, detected_events = self.extract_specific_events(event_name, detected_events)
+            not_handled_events = event_class.bootstrap(self, target_events)
+            for not_handled_event in not_handled_events:
+                self.__queue.enqueue(not_handled_event)
         return True
 
     def run_world_chain_monitor(self):

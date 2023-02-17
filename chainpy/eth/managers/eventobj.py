@@ -58,7 +58,7 @@ class DetectedEvent:
 
     @property
     def block_hash(self) -> EthHashBytes:
-        block_hash = self.block_hash
+        block_hash = self.log.block_hash
         if not isinstance(block_hash, EthHashBytes):
             block_hash = EthHashBytes(block_hash)
         return block_hash

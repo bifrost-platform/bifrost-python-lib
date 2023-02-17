@@ -1,12 +1,11 @@
 import json
-import unittest
 from json import JSONDecodeError
 
 import requests
 import time
 from typing import List, Optional, Union, Callable
 
-from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpcNoneResult, RpCMaxRetry
+from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpCMaxRetry
 from .utils import merge_dict
 from ..ethtype.amount import EthAmount
 from bridgeconst.consts import Chain
@@ -73,6 +72,9 @@ class EthRpcClient:
         self.__transaction_block_delay = DEFAULT_RPC_TX_BLOCK_DELAY \
             if transaction_block_delay is None else transaction_block_delay
 
+        # for debug and monitoring
+        self.call_num = 0
+
         # check connection
         self.__chain_id: Optional[int] = None
         if self.__url_with_access_key:
@@ -136,6 +138,7 @@ class EthRpcClient:
         try:
             PrometheusExporter.exporting_rpc_requested(self.chain)
             response = requests.post(self.url, json=body, headers=headers)
+            self.call_num += 1
 
             code = response.status_code
             if code < 200 or 400 < code:
@@ -212,21 +215,18 @@ class EthRpcClient:
                 amended_heights.append(amended_height)
             return amended_heights
 
-    def eth_get_latest_block_number(self) -> int:
+    def eth_get_latest_block_number(self, matured_only: bool = False) -> int:
         """ returns the latest block height. """
         resp = self.send_request("eth_blockNumber", list())
-        return int(resp, 16)
-
-    def eth_get_matured_block_number(self) -> int:
-        """ queries the latest block height and returns matured block height."""
-        latest_height = self.eth_get_latest_block_number()
-        return latest_height - self.__block_aging_period
+        latest_height = int(resp, 16)
+        return latest_height if not matured_only else latest_height - self.__block_aging_period
 
     def eth_get_latest_block(self, verbose: bool = False) -> EthBlock:
         resp = self.send_request("eth_getBlockByNumber", ["latest", verbose])
         return EthBlock.from_dict(resp)
 
-    def eth_get_balance(self, address: EthAddress, height: Union[int, str] = "latest", matured: bool = False) -> EthAmount:
+    def eth_get_balance(self, address: EthAddress, height: Union[int, str] = "latest",
+                        matured: bool = False) -> EthAmount:
         """ queries matured balance of the user. """
         if not isinstance(address, EthAddress):
             raise Exception("address type must be \"EthAddress\" type")
@@ -242,7 +242,7 @@ class EthRpcClient:
     def _get_matured_block(self, method: str, params: list) -> Optional[EthBlock]:
         resp = self.send_request(method, params)
         fetched_block: EthBlock = EthBlock.from_dict(resp)
-        if fetched_block.number > self.eth_get_matured_block_number():
+        if fetched_block.number > self.eth_get_latest_block_number(matured_only=True):
             return None
         return fetched_block
 
@@ -258,7 +258,7 @@ class EthRpcClient:
     def _get_transaction(self, method: str, params: list) -> Optional[EthTransaction]:
         resp = self.send_request(method, params)
         fetched_tx: EthTransaction = EthTransaction.from_dict(resp)
-        if fetched_tx.block_number > self.eth_get_matured_block_number():
+        if fetched_tx.block_number > self.eth_get_latest_block_number(matured_only=True):
             return None
         return fetched_tx
 
@@ -289,7 +289,7 @@ class EthRpcClient:
         if resp is None:
             return None
         fetched_receipt: EthReceipt = EthReceipt.from_dict(resp)
-        if fetched_receipt.block_number > self.eth_get_matured_block_number():
+        if fetched_receipt.block_number > self.eth_get_latest_block_number(matured_only=True):
             return None
         return fetched_receipt
 
@@ -313,18 +313,29 @@ class EthRpcClient:
 
     def eth_get_logs(self,
                      from_block: int, to_block: int,
-                     addresses: List[EthAddress], topics: List[EthHashBytes]) -> List[EthLog]:
+                     addresses: List[EthAddress],
+                     topics: List[Union[EthHashBytes, List[EthHashBytes]]]) -> List[EthLog]:
         """ find logs of the event (which have topics) from multiple contracts """
         if from_block > to_block:
             raise Exception("from_block should be less than to_block")
 
         amended_block_nums = self._reduce_heights_to_matured_height([from_block, to_block])
 
+        topic_hexes = list()
+        for topic in topics:
+            if isinstance(topic, list):
+                item = list()
+                for tp in topic:
+                    item.append(tp.hex())
+                topic_hexes.append(item)
+            else:
+                topic_hexes.append(topic.hex())
+
         params: list = [{
             "fromBlock": amended_block_nums[0],
             "toBlock": amended_block_nums[1],
             "address": [address.with_checksum() for address in addresses],
-            "topics": [topic.hex() for topic in topics]
+            "topics": topic_hexes
         }]
         resp = self.send_request("eth_getLogs", params)
         try:
@@ -367,7 +378,6 @@ class EthRpcClient:
         resp = self.send_request("eth_estimateGas", [tx, "latest"])
         return int(resp, 16)
 
-    # matured height 적용하지 않음.
     def eth_get_user_nonce(self, address: EthAddress, height: Union[int, str] = "latest") -> int:
         height_hex_or_latest = _hex_height_or_latest(height)
         if not isinstance(address, EthAddress):
@@ -378,16 +388,3 @@ class EthRpcClient:
     def eth_send_raw_transaction(self, signed_serialized_tx: EthHexBytes) -> EthHashBytes:
         resp = self.send_request("eth_sendRawTransaction", [signed_serialized_tx.hex()])
         return EthHashBytes(resp)
-
-
-class TestTransaction(unittest.TestCase):
-    def setUp(self) -> None:
-        global_logger.init(log_file_name="test.log")
-        self.cli = EthRpcClient.from_config_files(
-            "configs/entity.relayer.json",
-            "configs/entity.relayer.private.json",
-            chain_index=Chain.BFC_MAIN
-        )
-
-    def test_rpc_non_result_exception(self):
-        self.assertRaises(RpcNoneResult, self.cli.eth_get_block_by_hash, (EthHashBytes("0x" + "00" * 32)))
