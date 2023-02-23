@@ -13,7 +13,7 @@ setup(
         "requests==2.28.2",
         "dataclasses-json==0.5.7",
         "prometheus-client==0.15.0",
-        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@230119",
+        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@extend-enum-for-cross-bifi-and-cross-swap",
         "python-dotenv==0.21.0"
     ]
 )
