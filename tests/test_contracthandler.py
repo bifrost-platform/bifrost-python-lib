@@ -12,7 +12,7 @@ class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
         self.cli = EthContractHandler.from_config_files(
             "./configs-event-test/entity.test.json",
-            chain_index=Chain.BFC_TEST
+            chain=Chain.BFC_TEST
         )
         self.contract_addr1 = EthAddress(0x8Af2242724343Bd203B372F492d64AA8B0b0fFF2)
         self.contract_name1 = "test_contract1"
