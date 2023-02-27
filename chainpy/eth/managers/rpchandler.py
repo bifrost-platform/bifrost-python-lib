@@ -3,7 +3,9 @@ from json import JSONDecodeError
 
 import requests
 import time
-from typing import List, Optional, Union, Callable
+from typing import List, Optional, Union, Callable, Tuple
+
+from requests import Response
 
 from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpCMaxRetry
 from .utils import merge_dict
@@ -106,7 +108,7 @@ class EthRpcClient:
         )
 
     @classmethod
-    def from_config_files(cls, config_file: str, private_config_file: str = None, chain_index: Chain = Chain.NONE):
+    def from_config_files(cls, config_file: str, private_config_file: str = None, chain: Chain = Chain.NONE):
         with open(config_file, "r") as f:
             config = json.load(f)
         if private_config_file is None:
@@ -114,7 +116,7 @@ class EthRpcClient:
         else:
             with open(private_config_file, "r") as f:
                 private_config = json.load(f)
-        return cls.from_config_dict(config, private_config, chain_index)
+        return cls.from_config_dict(config, private_config, chain)
 
     @property
     def url(self) -> str:
@@ -123,6 +125,27 @@ class EthRpcClient:
     @property
     def tx_commit_time_sec(self) -> int:
         return self.__block_period_sec * (self.__transaction_block_delay + self.__block_aging_period)
+
+    @property
+    def chain(self) -> Chain:
+        """ return chain index specified from the configuration. """
+        return self.__chain
+
+    @property
+    def chain_id(self) -> int:
+        """ return chain id emitted by the rpc node. """
+        return self.__chain_id
+
+    def send_request_base(self, body: dict, headers: dict) -> Response:
+        PrometheusExporter.exporting_rpc_requested(self.chain)
+        self.call_num += 1
+
+        response = requests.post(self.url, json=body, headers=headers)
+        code = response.status_code
+        if code < 200 or 400 < code:
+            raise RpcOutOfStatusCode(self.chain, "code({}), msg({})".format(code, response.content))
+
+        return response
 
     def send_request(self, method: str, params: list, cnt: int = 0) -> Optional[Union[dict, str]]:
         if cnt > RPC_RETRY_MAX_RETRY_NUM:
@@ -135,46 +158,29 @@ class EthRpcClient:
             "id": 1
         }
         headers = {'Content-type': 'application/json'}
-        try:
-            PrometheusExporter.exporting_rpc_requested(self.chain)
-            response = requests.post(self.url, json=body, headers=headers)
-            self.call_num += 1
 
-            code = response.status_code
-            if code < 200 or 400 < code:
+        while True:
+            try:
+                response = self.send_request_base(body, headers)
+                response_json = response.json()
+                break
+            except RpcOutOfStatusCode or JSONDecodeError as e:
+                # export log for out-of-status error
                 PrometheusExporter.exporting_rpc_failed(self.chain)
-                raise RpcOutOfStatusCode(self.chain, "code({}), msg({})".format(code, response.content))
+                global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=str(e))
 
-        except Exception as e:
-            PrometheusExporter.exporting_rpc_failed(self.chain)
-            global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=str(e))
+                # sleep
+                sleep_notify_msg = "re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec)
+                global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=sleep_notify_msg)
+                time.sleep(self.__rpc_server_downtime_allow_sec)
 
-            sleep_notify_msg = "re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec)
-            global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=sleep_notify_msg)
-            time.sleep(self.__rpc_server_downtime_allow_sec)
+                # re-send the request
+                resend_notify_msg = "re-send rpc request: {}".format(body)
+                global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=resend_notify_msg)
 
-            resend_notify_msg = "re-send rpc request: {}".format(body)
-            global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=resend_notify_msg)
-            return self.send_request(method, params)
-
-        try:
-            response_json = response.json()
-        except JSONDecodeError:
-            PrometheusExporter.exporting_rpc_failed(self.chain)
-            global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=str(response.content))
-
-            sleep_notify_msg = "re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec)
-            global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=sleep_notify_msg)
-
-            time.sleep(RPC_RETRY_SLEEP_TIME_IN_SECS)
-
-            resend_notify_msg = "re-send rpc request: {}".format(body)
-            global_logger.formatted_log("RPCJsonDecodeError", related_chain=self.__chain, msg=resend_notify_msg)
-            return self.send_request(method, params, cnt + 1)
-
-        except Exception:
-            # just defensive code
-            raise Exception("Not handled error on {}: {}".format(self.chain.name, response.content))
+            except Exception as e:
+                # raise not handled exception
+                raise_integrated_exception(self.chain, e)
 
         if "result" in list(response_json.keys()):
             return response_json["result"]
@@ -185,16 +191,6 @@ class EthRpcClient:
             raise_integrated_exception(self.chain, error_json=response_json["error"])
         else:
             raise Exception("Not handled error on {}: {}".format(self.chain.name, response.content))
-
-    @property
-    def chain(self) -> Chain:
-        """ return chain index specified from the configuration. """
-        return self.__chain
-
-    @property
-    def chain_id(self) -> int:
-        """ return chain id emitted by the rpc node. """
-        return self.__chain_id
 
     def _reduce_heights_to_matured_height(self, heights: Union[list, int, str]) -> Union[List[str], str]:
         """
