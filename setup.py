@@ -6,7 +6,7 @@ setup(
     version=__version__,
     package=find_packages,
     install_requires=[
-        "eth-abi==3.0.1",
+        "eth-abi==2.2.1",
         "eth-keys==0.4.0",
         "eth-account==0.8.0",
         "pycryptodome==3.16.0",
