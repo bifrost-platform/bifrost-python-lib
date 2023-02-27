@@ -1,5 +1,6 @@
 import json
 
+import uvicorn
 from fastapi import FastAPI, Request, Response
 from jsonrpcserver import Result, Success, dispatch, method
 from starlette import status
@@ -51,3 +52,7 @@ async def index(request: Request):
         resp.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
     return resp
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, port=ENDPOINT_PORT)

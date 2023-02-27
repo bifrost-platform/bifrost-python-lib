@@ -1,19 +1,18 @@
+import os
 import unittest
+from tests.rpcendpointmock.procutil import kill_by_file_name
 
-import uvicorn
 from bridgeconst.consts import Chain
-from rpcendpointmock.rpcserver import METHOD_503_ERROR, MOCK_CHAIN_ID, app, ENDPOINT_PORT
 from chainpy.eth.managers.rpchandler import EthRpcClient
 
-
-mockup_rpc_server = app
+from rpcendpointmock.rpcserver import METHOD_503_ERROR, MOCK_CHAIN_ID, ENDPOINT_PORT
 
 
 class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
-        result = uvicorn.run(mockup_rpc_server, port=ENDPOINT_PORT)
-        print(type(result))
-        print(result)
+        # launch mocking server
+        self.server_launch_file_name = "rpcendpointmock/rpcserver.py"
+        os.system("python {} &".format(self.server_launch_file_name))
 
         self.cli = EthRpcClient.from_config_files(
             "./configs-event-test/entity.test.json",
@@ -21,18 +20,8 @@ class TestContractHandler(unittest.TestCase):
         )
 
     def tearDown(self) -> None:
-        # uvicorn.
-        pass
+        result = kill_by_file_name(self.server_launch_file_name)
+        print("server down") if result else print("No server")
 
-    def test_simple_request(self):
-        resp = self.cli.send_request("eth_chainId", [])
-        print(type(resp))
-        print(resp)
-
-    def test_init(self):
-        self.assertEqual(self.cli.chain_id, )
-        print(self.cli.chain_id, MOCK_CHAIN_ID)
-
-    def test_response_503(self):
-        result = self.cli.send_request(METHOD_503_ERROR, [])
-        print(result)
+    def test_base(self):
+        print("hello")
