@@ -3,8 +3,8 @@ from typing import List
 
 from bridgeconst.consts import Chain
 
-from chainpy.eth.ethtype.chaindata import EthLog
 from chainpy.eth.ethtype.hexbytes import EthAddress, EthHashBytes
+from chainpy.eth.ethtype.receipt import EthLog
 from chainpy.eth.managers.contracthandler import EthContractHandler
 
 

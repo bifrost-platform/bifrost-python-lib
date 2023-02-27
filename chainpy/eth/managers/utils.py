@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json, LetterCase
-from typing import List, Optional
+from typing import List, Optional, Union
 
 
 @dataclass_json(letter_case=LetterCase.CAMEL)
@@ -37,3 +37,19 @@ def merge_dict(base_dict: dict, add_dict: dict):
             base_dict[key] = {}
         base_dict[key] = merge_dict(base_dict[key], add_dict[key])
     return base_dict
+
+
+def reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
+    if height == "latest":
+        height = 2 ** 256 - 1
+    if isinstance(height, int):
+        return hex(min(height, matured_max_height))
+    raise Exception("height should be integer or \"latest\"")
+
+
+def hex_height_or_latest(height: Union[int, str] = "latest") -> str:
+    if height == "latest":
+        return height
+    if isinstance(height, int):
+        return hex(height)
+    raise Exception("height should be integer or \"latest\"")
