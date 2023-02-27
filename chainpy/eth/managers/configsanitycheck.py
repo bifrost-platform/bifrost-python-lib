@@ -1,544 +1,315 @@
 import copy
-import unittest
-import bridgeconst.consts
+from typing import Any
+from jsonpath_ng import parse, Fields
+from bridgeconst.consts import Chain, Asset
 
 
-class ConfigCheckerError(Exception):
-    def __init__(self, msg):
-        super().__init__(msg)
+class KeyRequired(Exception):
+    def __init__(self, json_expr: Fields):
+        msg = " is required"
+        super().__init__(str(json_expr) + msg)
 
 
-def is_default(item) -> bool:
-    return item == type(item)()
+class NotMeaningful(Exception):
+    def __init__(self, json_expr: Fields, value: Any):
+        msg = " should be meaningful, but value()".format(value)
+        super().__init__(str(json_expr) + msg)
 
 
-def is_none(item) -> bool:
-    return item is None
+class NotAllowDefault(Exception):
+    def __init__(self, json_expr: Fields, value: Any):
+        msg = " is not allowed default value: {}".format(value)
+        super().__init__(str(json_expr) + msg)
 
 
-def is_meaningful(item) -> bool:
-    return False if is_none(item) else False if is_default(item) else True
+class TypeNotMatch(Exception):
+    def __init__(self, json_expr: Fields, expected_type: type, actual_type: type):
+        msg = " expected type ({}), but actual type ({})".format(expected_type, actual_type)
+        super().__init__(str(json_expr) + msg)
 
 
-def assert_not_default(item, name):
-    if is_default(item):
-        raise ConfigCheckerError("\"{}\" should be meaningful".format(name))
+class InvalidEnum(Exception):
+    def __init__(self, json_expr: Fields, expected_enum: type, value: Any):
+        msg = " Invalid enum: enum_type({}), value({})".format(expected_enum.__name__, value)
+        super().__init__(str(json_expr) + msg)
 
 
-def assert_required(item, name, default_allow: bool = True):
-    if item is None:
-        raise ConfigCheckerError("\"{}\" is required".format(name))
-    if not default_allow:
-        assert_not_default(item, name)
+class NotUsedConfigExist(Exception):
+    def __init__(self, json_expr: Fields, data: Any):
+        super().__init__(str(json_expr) + " ".format(data))
 
 
-def assert_enum(name: str, expected_enum_type: type):
-    try:
-        _enum = expected_enum_type[name]
-    except Exception as e:
-        raise ConfigCheckerError("Invalid enum: enum_type({}), name({})".format(expected_enum_type.__name__, name))
+def is_default(value) -> bool:
+    return value == type(value)()
 
 
-def check_valid_type(
-        config: dict,
-        name: str,
-        expected_type: type,
-        is_enum: bool = False,
-        required: bool = False,
-        default_allow: bool = True
-):
-    item = config.get(name)
-    if required:
-        assert_required(item, name, default_allow=default_allow)
+def is_none(value) -> bool:
+    return value is None
 
-    if not default_allow:
-        assert_not_default(item, name)
 
-    if item is None:
-        # does not necessary to check type if item is None
-        return
-
-    if is_enum:
-        assert_enum(item, expected_type)
+def is_meaningful(value) -> bool:
+    if isinstance(value, list):
+        for data in value:
+            if is_meaningful(data):
+                continue
+            return False
+        return True
     else:
-        if not isinstance(item, expected_type):
-            msg = "Not expected type: expected({}), actual({})".format(expected_type, type(item))
-            raise ConfigCheckerError(msg)
+        return False if is_none(value) else False if is_default(value) else True
 
 
-def delete_key_safe(config: dict, key: str):
-    if config.get(key) is not None:
-        del config[key]
+class ConfigSanityChecker:
+    def __init__(self, config: dict):
+        self.config = copy.deepcopy(config)
 
+        supporting_expr = parse("entity.supporting_chains")
+        matches = supporting_expr.find(self.config)
+        if len(matches) == 0:
+            raise Exception("entity.supporting_chains is empty")
+        self.supporting_chain_names = copy.deepcopy(matches[0].value)
 
-class ChainConfigChecker:
-    @staticmethod
-    def check_config(chain_config: dict):
-        check_valid_type(
-            chain_config, "chain_name", expected_type=bridgeconst.consts.Chain, is_enum=True, required=True
+    def check_valid_type(
+            self,
+            json_expr: Fields,
+            expected_value_type: type,
+            is_enum: bool = False,
+            key_required: bool = False,
+            value_default_allow: bool = True
+    ):
+        matched_values = [match.value for match in json_expr.find(self.config)]
+        if key_required and not matched_values:
+            raise KeyRequired(json_expr)
+
+        for value in matched_values:
+            if not value_default_allow and is_default(value):
+                raise NotAllowDefault(json_expr, value)
+
+            if is_enum:
+                try:
+                    _enum = expected_value_type[value]
+                except KeyError as e:
+                    raise InvalidEnum(json_expr, expected_value_type, value)
+            else:
+                if not isinstance(value, expected_value_type):
+                    raise TypeNotMatch(json_expr, expected_value_type, type(value))
+
+    def delete_key_safe(self, json_expr: Fields):
+        return json_expr.filter(lambda d: True, self.config)
+
+    def raise_exception_if_not_empty(self, json_expr: Fields):
+        value = json_expr.find(self.config)[0].value
+        if is_meaningful(value):
+            raise NotUsedConfigExist(json_expr, value)
+
+        self.delete_key_safe(json_expr)
+
+    def check_multichain_config(self):
+        multichain_expr = parse("multichain_config")
+        self.check_valid_type(multichain_expr, dict, key_required=True, value_default_allow=False)
+
+        multichain_period_expr = parse("multichain_config.chain_monitor_period_sec")
+        self.check_valid_type(multichain_period_expr, int, key_required=True, value_default_allow=False)
+        self.delete_key_safe(multichain_period_expr)
+
+        self.raise_exception_if_not_empty(multichain_expr)
+
+    def check_entity_config(self):
+        entity_expr = parse("entity")
+        self.check_valid_type(entity_expr, dict, key_required=True, value_default_allow=False)
+
+        supporting_chains_expr = parse("entity.supporting_chains")
+
+        self.check_valid_type(supporting_chains_expr, list, key_required=True, value_default_allow=False)
+        supporting_chains_element_expr = parse("entity.supporting_chains[*]")
+        self.check_valid_type(supporting_chains_element_expr, Chain, is_enum=True, key_required=True)
+        self.delete_key_safe(supporting_chains_element_expr)
+
+        self.delete_key_safe(supporting_chains_expr)
+
+        account_name_expr = parse("entity.account_name")
+        is_slow_relayer = account_name_expr.find(self.config)[0].value.lower() == "slow-relayer"
+        self.check_valid_type(account_name_expr, str, key_required=False, value_default_allow=True)
+        self.delete_key_safe(account_name_expr)
+
+        role_expr = parse("entity.role")
+        self.check_valid_type(role_expr, str, key_required=False, value_default_allow=True)
+        self.delete_key_safe(role_expr)
+
+        delay_sec_expr = parse("entity.slow_relayer_delay_sec")
+        self.check_valid_type(
+            delay_sec_expr, int, key_required=is_slow_relayer, value_default_allow=(not is_slow_relayer)
         )
-        delete_key_safe(chain_config, "chain_name")
-        check_valid_type(chain_config, "url_with_access_key", expected_type=str, required=True, default_allow=False)
-        delete_key_safe(chain_config, "url_with_access_key")
-        check_valid_type(chain_config, "block_period_sec", expected_type=int, required=False, default_allow=False)
-        delete_key_safe(chain_config, "block_period_sec")
-        check_valid_type(chain_config, "block_aging_period", expected_type=int, required=False, default_allow=False)
-        delete_key_safe(chain_config, "block_aging_period")
+        self.delete_key_safe(delay_sec_expr)
 
-        check_valid_type(chain_config, "bootstrap_latest_height", expected_type=int)
-        delete_key_safe(chain_config, "bootstrap_latest_height")
-        check_valid_type(chain_config, "transaction_block_delay", expected_type=int, default_allow=False)
-        delete_key_safe(chain_config, "transaction_block_delay")
-        check_valid_type(chain_config, "receipt_max_try", expected_type=int, default_allow=False)
-        delete_key_safe(chain_config, "receipt_max_try")
-        check_valid_type(chain_config, "max_log_num", expected_type=int, default_allow=False)
-        delete_key_safe(chain_config, "max_log_num")
-        check_valid_type(chain_config, "rpc_server_downtime_allow_sec", expected_type=int, default_allow=False)
-        delete_key_safe(chain_config, "rpc_server_downtime_allow_sec")
-        check_valid_type(chain_config, "abi_dir", str, default_allow=True)
-        delete_key_safe(chain_config, "abi_dir")
+        secret_hex_expr = parse("entity.secret_hex")
+        self.check_valid_type(secret_hex_expr, str, key_required=False, value_default_allow=True)
+        self.delete_key_safe(secret_hex_expr)
 
-        ChainConfigChecker.check_contracts(chain_config)
-        ChainConfigChecker.check_events(chain_config)
-        delete_key_safe(chain_config, "contracts")
-        delete_key_safe(chain_config, "events")
+        self.raise_exception_if_not_empty(entity_expr)
 
-        ChainConfigChecker.check_fee_config(chain_config)
-        delete_key_safe(chain_config, "fee_config")
+    def check_chain_config(self, chain_name: str):
+        chain_name_expr = parse("{}.chain_name".format(chain_name))
+        self.check_valid_type(chain_name_expr, str, key_required=True, value_default_allow=False)
+        self.delete_key_safe(chain_name_expr)
 
-        if len(chain_config.keys()) != 0:
-            raise ConfigCheckerError("An unsupported config exists.: {}".format(chain_config.keys()))
+        block_period_sec_expr = parse("{}.block_period_sec".format(chain_name))
+        self.check_valid_type(block_period_sec_expr, int, key_required=False, value_default_allow=False)
+        self.delete_key_safe(block_period_sec_expr)
 
-    @staticmethod
-    def check_fee_config(config: dict):
-        check_valid_type(config, "fee_config", dict, required=False, default_allow=False)
+        endpoint_expr = parse("{}.url_with_access_key".format(chain_name))
+        self.check_valid_type(endpoint_expr, str, key_required=True, value_default_allow=False)
+        self.delete_key_safe(endpoint_expr)
 
-        fee_config = config["fee_config"]
-        check_valid_type(fee_config, "type", int, required=True, default_allow=True)
-        if fee_config["type"] == 0:
-            check_valid_type(fee_config, "gas_price", int, required=True)
-        elif 0 < fee_config["type"] <= 2:
-            check_valid_type(fee_config, "max_gas_price", int, required=True)
-            check_valid_type(fee_config, "max_priority_price", int, required=True)
-        else:
-            raise ConfigCheckerError("Invalid type of fee_config: {}".format(fee_config["type"]))
+        latest_height_expr = parse("{}.bootstrap_latest_height".format(chain_name))
+        self.check_valid_type(latest_height_expr, int, key_required=False, value_default_allow=True)
+        self.delete_key_safe(latest_height_expr)
 
-    @staticmethod
-    def check_contracts(config: dict):
-        check_valid_type(config, "contracts", list)
+        aging_period_expr = parse("{}.block_aging_period".format(chain_name))
+        self.check_valid_type(aging_period_expr, int, key_required=False, value_default_allow=False)
+        self.delete_key_safe(aging_period_expr)
 
-        contracts_config_list = config.get("contracts")
-        if not is_meaningful(contracts_config_list):
-            return
+        tx_delay_expr = parse("{}.transaction_block_delay".format(chain_name))
+        self.check_valid_type(tx_delay_expr, int, key_required=False, value_default_allow=False)
+        self.delete_key_safe(tx_delay_expr)
 
-        for contract_config in contracts_config_list:
-            check_valid_type(contract_config, "name", str, required=True, default_allow=False)
-            check_valid_type(contract_config, "address", str, required=True, default_allow=False)
-            check_valid_type(contract_config, "abi_file", str, required=True, default_allow=False)
-            check_valid_type(contract_config, "deploy_height", int, required=False)
+        receipt_max_try_expr = parse("{}.receipt_max_try".format(chain_name))
+        self.check_valid_type(receipt_max_try_expr, int, key_required=False, value_default_allow=False)
+        self.delete_key_safe(receipt_max_try_expr)
 
-    @staticmethod
-    def check_events(config: dict):
-        check_valid_type(config, "events", list)
+        max_log_expr = parse("{}.max_log_num".format(chain_name))
+        self.check_valid_type(max_log_expr, int, key_required=False, value_default_allow=False)
+        self.delete_key_safe(max_log_expr)
 
-        event_config_list = config.get("events")
-        if not is_meaningful(event_config_list):
-            return
+        server_down_time_expr = parse("{}.rpc_server_downtime_allow_sec".format(chain_name))
+        self.check_valid_type(server_down_time_expr, int, key_required=False, value_default_allow=False)
+        self.delete_key_safe(server_down_time_expr)
 
-        contract_config_list = config.get("contracts")
-        if contract_config_list is None:
-            raise ConfigCheckerError("There is no contract to which the event belongs.")
+        fee_config_expr = parse("{}.fee_config".format(chain_name))
+        self.check_valid_type(fee_config_expr, dict, key_required=False, value_default_allow=False)
+        fee_config = self.config[chain_name].get("fee_config")
+        if fee_config:
+            fee_type_expr = parse("{}.fee_config.type".format(chain_name))
+            self.check_valid_type(fee_type_expr, int, key_required=True, value_default_allow=True)
+            fee_type = fee_config["type"]
+            if fee_type not in [0, 1, 2]:
+                raise Exception(str(fee_config_expr) + " type must be 0, 1 or 2, actual({})".format(fee_type))
+            self.delete_key_safe(fee_type_expr)
 
-        for event_config in event_config_list:
-            check_valid_type(event_config, "contract_name", str, required=True, default_allow=False)
-            check_valid_type(event_config, "event_name", str, required=True, default_allow=False)
+            type0_gas_price_expr = parse("{}.fee_config.gas_price".format(chain_name))
+            key_required = True if fee_type in [0, 1] else False
+            self.check_valid_type(type0_gas_price_expr, int, key_required=key_required, value_default_allow=False)
+            self.delete_key_safe(type0_gas_price_expr)
 
-            pass_flag = False
-            for contract in contract_config_list:
-                if contract["name"] == event_config["contract_name"]:
-                    pass_flag = True
-            if not pass_flag:
-                raise ConfigCheckerError(
-                    "There is no contract to which the event belongs.: {}".format(event_config["event_name"])
-                )
+            type2_max_gas_price_expr = parse("{}.fee_config.max_gas_price".format(chain_name))
+            key_required = True if not key_required else False
+            self.check_valid_type(type2_max_gas_price_expr, int, key_required=key_required, value_default_allow=False)
+            self.delete_key_safe(type2_max_gas_price_expr)
 
+            type2_max_priority_price_expr = parse("{}.fee_config.max_priority_price".format(chain_name))
+            self.check_valid_type(type2_max_priority_price_expr, int, key_required=key_required, value_default_allow=False)
+            self.delete_key_safe(type2_max_priority_price_expr)
 
-class OracleConfigChecker:
-    @staticmethod
-    def check_config(config: dict):
-        check_valid_type(config, "bitcoin_block_hash", dict, required=True, default_allow=True)
-        btc_oracle_config = config["bitcoin_block_hash"]
-        if is_meaningful(btc_oracle_config):
-            check_valid_type(
-                btc_oracle_config,
-                "name",
-                bridgeconst.consts.Oracle,
-                is_enum=True,
-                required=True,
-                default_allow=False
-            )
-            delete_key_safe(btc_oracle_config, "name")
+            self.raise_exception_if_not_empty(fee_config_expr)
 
-            check_valid_type(btc_oracle_config, "url", str, required=True, default_allow=False)
-            delete_key_safe(btc_oracle_config, "url")
-            check_valid_type(btc_oracle_config, "collection_period_sec", int, required=True, default_allow=False)
-            delete_key_safe(btc_oracle_config, "collection_period_sec")
-            if len(btc_oracle_config.keys()) != 0:
-                raise ConfigCheckerError("An unsupported config exists.: {}".format(btc_oracle_config.keys()))
-        delete_key_safe(config, "bitcoin_block_hash")
+        abi_dir_expr = parse("{}.abi_dir".format(chain_name))
+        self.check_valid_type(abi_dir_expr, str, key_required=False, value_default_allow=True)
+        self.delete_key_safe(abi_dir_expr)
 
-        check_valid_type(config, "asset_prices", dict, required=False, default_allow=True)
-        price_oracle_config = config["asset_prices"]
-        if is_meaningful(price_oracle_config):
-            check_valid_type(price_oracle_config, "names", list, required=True, default_allow=False)
-            for name in price_oracle_config["names"]:
-                assert_enum(name, bridgeconst.consts.Asset)
-            delete_key_safe(price_oracle_config, "names")
+        contracts_expr = parse("{}.contracts".format(chain_name))
+        self.check_valid_type(contracts_expr, list, key_required=False, value_default_allow=True)
+        if self.config[chain_name].get("contracts"):
+            contracts_names_expr = parse("{}.contracts[*].name".format(chain_name))
+            self.check_valid_type(contracts_names_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(contracts_names_expr)
 
-            check_valid_type(price_oracle_config, "collection_period_sec", int, required=True, default_allow=False)
-            delete_key_safe(price_oracle_config, "collection_period_sec")
+            contracts_addrs_expr = parse("{}.contracts[*].address".format(chain_name))
+            self.check_valid_type(contracts_addrs_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(contracts_addrs_expr)
 
-            check_valid_type(price_oracle_config, "urls", dict, required=True, default_allow=False)
-            for source_name in price_oracle_config["urls"].keys():
-                check_valid_type(price_oracle_config["urls"], source_name, str, required=True, default_allow=False)
-            delete_key_safe(price_oracle_config, "urls")
-            if len(price_oracle_config.keys()) != 0:
-                raise ConfigCheckerError("An unsupported config exists.: {}".format(price_oracle_config.keys()))
+            abi_files_expr = parse("{}.contracts[*].abi_file".format(chain_name))
+            self.check_valid_type(abi_files_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(abi_files_expr)
 
-        delete_key_safe(config, "asset_prices")
-        if len(config.keys()) != 0:
-            raise ConfigCheckerError("An unsupported config exists.: {}".format(config.keys()))
+            deploy_height_expr = parse("{}.contracts[*].deploy_height".format(chain_name))
+            self.check_valid_type(deploy_height_expr, int, key_required=False, value_default_allow=False)
+            self.delete_key_safe(deploy_height_expr)
 
+            self.raise_exception_if_not_empty(contracts_expr)
+        self.delete_key_safe(contracts_expr)
 
-class EntityConfigChecker:
-    @staticmethod
-    def check_config(config: dict):
-        check_valid_type(config, "role", str, required=True, default_allow=False)
-        roles = ["User", "Relayer", "Fast-relayer", "Slow-relayer"]
-        if config["role"].capitalize() not in roles:
-            raise ConfigCheckerError("Invalid entity's role: {}".format(config["role"]))
+        events_expr = parse("{}.events".format(chain_name))
+        self.check_valid_type(events_expr, list, key_required=False, value_default_allow=True)
+        if self.config[chain_name].get("events"):
+            contract_name_expr = parse("{}.events[*].contract_name".format(chain_name))
+            self.check_valid_type(contract_name_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(contract_name_expr)
 
-        if config["role"] == "slow-relayer":
-            check_valid_type(config, "slow_relayer_delay_sec", int, required=True, default_allow=False)
-        else:
-            check_valid_type(config, "slow_relayer_delay_sec", int, required=False, default_allow=True)
-        delete_key_safe(config, "role")
-        delete_key_safe(config, "slow_relayer_delay_sec")
+            event_name_expr = parse("{}.events[*].event_name".format(chain_name))
+            self.check_valid_type(event_name_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(event_name_expr)
 
-        check_valid_type(config, "account_name", str, required=False, default_allow=True)
-        delete_key_safe(config, "account_name")
+            self.raise_exception_if_not_empty(events_expr)
+        self.delete_key_safe(events_expr)
 
-        check_valid_type(config, "secret_hex", str, required=False, default_allow=True)
-        delete_key_safe(config, "secret_hex")
+        self.raise_exception_if_not_empty(parse("{}".format(chain_name)))
 
-        check_valid_type(config, "supporting_chains", list, required=True, default_allow=False)
-        for chain_name in config["supporting_chains"]:
-            assert_enum(chain_name, bridgeconst.consts.Chain)
+    def check_oracle_config(self):
+        oracle_expr = parse("oracle_config")
+        self.check_valid_type(oracle_expr, dict, key_required=False, value_default_allow=True)
 
-        delete_key_safe(config, "supporting_chains")
+        btc_hash_expr = parse("oracle_config.bitcoin_block_hash")
+        self.check_valid_type(btc_hash_expr, dict, key_required=True, value_default_allow=False)
+        if self.config["oracle_config"].get("bitcoin_block_hash"):
+            hash_name_expr = parse("oracle_config.bitcoin_block_hash.name")
+            self.check_valid_type(hash_name_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(hash_name_expr)
 
-        if len(config.keys()) != 0:
-            raise ConfigCheckerError("An unsupported config exists.: {}".format(config.keys()))
+            hash_urls_expr = parse("oracle_config.bitcoin_block_hash.url")
+            self.check_valid_type(hash_urls_expr, str, key_required=True, value_default_allow=False)
+            self.delete_key_safe(hash_urls_expr)
 
+            hash_period_expr = parse("oracle_config.bitcoin_block_hash.collection_period_sec")
+            self.check_valid_type(hash_period_expr, int, key_required=True, value_default_allow=False)
+            self.delete_key_safe(hash_period_expr)
+        self.raise_exception_if_not_empty(btc_hash_expr)
 
-class ConfigChecker:
-    @staticmethod
-    def check_config(config: dict):
-        check_valid_type(config, "multichain_config", dict, required=True, default_allow=False)
-        check_valid_type(
-            config["multichain_config"],
-            "chain_monitor_period_sec",
-            int,
-            required=True,
-            default_allow=False
-        )
-        delete_key_safe(config, "multichain_config")
+        price_expr = parse("oracle_config.asset_prices")
+        self.check_valid_type(price_expr, dict, key_required=False, value_default_allow=False)
+        if self.config["oracle_config"].get("asset_prices"):
+            price_name_expr = parse("oracle_config.asset_prices.names")
+            self.check_valid_type(price_name_expr, list, key_required=True, value_default_allow=False)
+            self.delete_key_safe(price_name_expr)
 
-        check_valid_type(config, "entity", dict, required=True, default_allow=False)
-        EntityConfigChecker.check_config(config["entity"])
-        delete_key_safe(config, "entity")
+            price_name_element_expr = parse("oracle_config.asset_prices.names[*]")
+            self.check_valid_type(price_name_element_expr, Asset, is_enum=True)
+            self.delete_key_safe(price_name_element_expr)
 
-        check_valid_type(config, "oracle_config", dict, required=False, default_allow=True)
-        OracleConfigChecker.check_config(config["oracle_config"])
-        delete_key_safe(config, "oracle_config")
+            price_period_expr = parse("oracle_config.asset_prices.collection_period_sec")
+            self.check_valid_type(price_period_expr, int, key_required=True, value_default_allow=False)
+            self.delete_key_safe(price_period_expr)
 
-        config_clone = copy.deepcopy(config)
-        for chain_name in config_clone.keys():
-            assert_enum(chain_name, bridgeconst.consts.Chain)
-            ChainConfigChecker.check_config(config[chain_name])
-            delete_key_safe(config, chain_name)
+            price_urls = parse("oracle_config.asset_prices.urls")
+            self.check_valid_type(price_urls, dict, key_required=True, value_default_allow=False)
+            api_names = list(self.config["oracle_config"]["asset_prices"]["urls"].keys())
+            for name in api_names:
+                json_expr_child = parse("oracle_config.asset_prices.urls." + name)
+                self.check_valid_type(json_expr_child, str, key_required=True, value_default_allow=False)
+                self.delete_key_safe(json_expr_child)
+            self.delete_key_safe(price_urls)
+        self.raise_exception_if_not_empty(price_expr)
 
-        if len(config.keys()) != 0:
-            raise ConfigCheckerError("An unsupported config exists.: {}".format(config.keys()))
+    def check_config(self):
+        self.check_multichain_config()
+        self.check_entity_config()
+        self.check_oracle_config()
 
+        for chain_name in self.supporting_chain_names:
+            if self.config.get(chain_name) is None:
+                raise Exception("The config of {} does not exists".format(chain_name))
+            try:
+                Chain[chain_name]
+            except KeyError as e:
+                json_expr = parse("{}".format(chain_name))
+                raise InvalidEnum(json_expr, Chain, chain_name)
 
-class TestConfigChecker(unittest.TestCase):
-    def setUp(self) -> None:
-        self.config = {
-            "oracle_config": {
-                "bitcoin_block_hash": {
-                    "name": "BITCOIN_BLOCK_HASH",
-                    "url": "a",
-                    "collection_period_sec": 300
-                },
-                "asset_prices": {
-                    "names": [
-                        "ETH_ON_ETH_MAIN",
-                        "BFC_ON_ETH_MAIN",
-                        "BNB_ON_BNB_MAIN",
-                        "USDC_ON_ETH_MAIN",
-                        "BIFI_ON_ETH_MAIN"
-                    ],
-                    "collection_period_sec": 120,
-                    "urls": {
-                        "Coingecko": "a",
-                        "Upbit": "a",
-                        "Chainlink": "a"
-                    }
-                }
-            },
-            "BFC_TEST": {
-                "chain_name": "BFC_TEST",
-                "block_period_sec": 3,
-                "url_with_access_key": "a",
-                "bootstrap_latest_height": 2883,
-                "block_aging_period": 2,
-                "transaction_block_delay": 5,
-                "receipt_max_try": 20,
-                "max_log_num": 1000,
-                "rpc_server_downtime_allow_sec": 180,
-                "fee_config": {
-                    "type": 2,
-                    "max_gas_price": 5000000000000,
-                    "max_priority_price": 1000000000000
-                },
-                "abi_dir": "configs/",
-                "contracts": [
-                    {
-                        "name": "authority", "address": "0x0000000000000000000000000000000000000400",
-                        "abi_file": "abi.authority.bifrost.json", "deploy_height": 1426518
-                    },
-                    {
-                        "name": "relayer_authority", "address": "0x0000000000000000000000000000000000002000",
-                        "abi_file": "abi.relayer.bifrost.json", "deploy_height": 1426518
-                    },
-                    {
-                        "name": "vault", "address": "0x90381bB369D4F8069fdA9246b23637a78c5d1c83",
-                        "abi_file": "abi.vault.bifrost.json", "deploy_height": 1426522
-                    },
-                    {
-                        "name": "socket", "address": "0x0218371b18340aBD460961bdF3Bd5F01858dAB53",
-                        "abi_file": "abi.socket.bifrost.json", "deploy_height": 1426524
-                    },
-                    {
-                        "name": "oracle", "address": "0x252a402B80d081F672e7874E94214054FdB78C77",
-                        "abi_file": "abi.oracle.bifrost.json", "deploy_height": 2057990
-                    },
-                    {
-                        "name": "BRIDGED_ETH_GOERLI_BFC_ON_BFC_TEST",
-                        "address": "0xfB5D65B8e8784ae3e004e1e476B05d408e6A1f2D", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BRIDGED_ETH_GOERLI_ETH_ON_BFC_TEST",
-                        "address": "0xD089773D293F43440529e6cfa84639E0498A0277", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BRIDGED_ETH_GOERLI_BIFI_ON_BFC_TEST",
-                        "address": "0xC4F1CcafCBeB0BE0F1CDBA499696603528655F29", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BRIDGED_ETH_GOERLI_USDC_ON_BFC_TEST",
-                        "address": "0xa7bb0a2693fb4d1ab9a6C5acCf5C63f12fab1855", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BRIDGED_BNB_TEST_USDC_ON_BFC_TEST",
-                        "address": "0xC67f0b7c01f6888D43B563B3a8B851856BcfAB64", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BRIDGED_BNB_TEST_BNB_ON_BFC_TEST",
-                        "address": "0x72D22DF54b86d25D9F9E0C10D516Ab22517b7051", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BRIDGED_MATIC_MUMBAI_MATIC_ON_BFC_TEST",
-                        "address": "0x82c1aD3aF709210F203869a03CdE8C7d0b9841d8", "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "UNIFIED_BFC_ON_BFC_TEST", "address": "0xB0fF18CB2d0F3f51a9c54Af862ed98f3caa027A1",
-                        "abi_file": "abi.unified.coin.json"
-                    },
-                    {
-                        "name": "UNIFIED_BIFI_ON_BFC_TEST", "address": "0x8010a873d59719e895E20f15f9906B5a1F399C3A",
-                        "abi_file": "abi.unified.erc20.json"
-                    },
-                    {
-                        "name": "UNIFIED_BNB_ON_BFC_TEST", "address": "0xCd8bf79fA84D551f2465C0a646cABc295d43Be5C",
-                        "abi_file": "abi.unified.erc20.json"
-                    },
-                    {
-                        "name": "UNIFIED_ETH_ON_BFC_TEST", "address": "0xc83EEd1bf5464eD5383bc3342b918E08f6815950",
-                        "abi_file": "abi.unified.erc20.json"
-                    },
-                    {
-                        "name": "UNIFIED_USDC_ON_BFC_TEST", "address": "0x28661511CDA7119B2185c647F23106a637CC074f",
-                        "abi_file": "abi.unified.erc20.json"
-                    },
-                    {
-                        "name": "UNIFIED_MATIC_ON_BFC_TEST", "address": "0xad115F901a1Af99dc83D055C89641031fd1a50Dc",
-                        "abi_file": "abi.unified.erc20.json"
-                    }
-                ],
-                "events": [
-                    {
-                        "contract_name": "socket",
-                        "event_name": "Socket"
-                    },
-                    {
-                        "contract_name": "socket",
-                        "event_name": "RoundUp"
-                    }
-                ]
-            },
-            "ETH_GOERLI": {
-                "chain_name": "ETH_GOERLI",
-                "block_period_sec": 13,
-                "url_with_access_key": "a",
-                "bootstrap_latest_height": 7749286,
-                "block_aging_period": 2,
-                "transaction_block_delay": 5,
-                "receipt_max_try": 20,
-                "max_log_num": 1000,
-                "rpc_server_downtime_allow_sec": 180,
-                "fee_config": {
-                    "type": 2,
-                    "max_gas_price": 2000000000000,
-                    "max_priority_price": 1000000000000
-                },
-                "abi_dir": "configs/",
-                "contracts": [
-                    {
-                        "name": "relayer_authority", "address": "0xF51f7e267D2D966f8d3Ff2fea42B410bB14800e1",
-                        "abi_file": "abi.relayer.external.json", "deploy_height": 8052946
-                    },
-                    {
-                        "name": "vault", "address": "0x7EB02c73349B3De1406e6b433c5bA1a526CBF253",
-                        "abi_file": "abi.vault.external.json", "deploy_height": 8052948
-                    },
-                    {
-                        "name": "socket", "address": "0xeF5260Db045200142a6B5DDB297e860099ffd51d",
-                        "abi_file": "abi.socket.external.json", "deploy_height": 8052951
-                    },
-                    {
-                        "name": "BFC_ON_ETH_GOERLI", "address": "0x3A815eBa66EaBE966a6Ae7e5Df9652eca24e9c54",
-                        "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "BIFI_ON_ETH_GOERLI", "address": "0x055ED934c426855caB467FdF8441D4FD6a7D2659",
-                        "abi_file": "abi.erc20.json"
-                    },
-                    {
-                        "name": "USDC_ON_ETH_GOERLI", "address": "0xD978Be30CE95D42DF7067b988f25bCa2b286Fb70",
-                        "abi_file": "abi.erc20.json"
-                    }
-                ],
-                "events": [
-                    {
-                        "contract_name": "socket",
-                        "event_name": "Socket"
-                    }
-                ]
-            },
-            "BNB_TEST": {
-                "chain_name": "BNB_TEST",
-                "block_period_sec": 3,
-                "url_with_access_key": "a",
-                "bootstrap_latest_height": 23601374,
-                "block_aging_period": 5,
-                "transaction_block_delay": 5,
-                "receipt_max_try": 20,
-                "max_log_num": 1000,
-                "rpc_server_downtime_allow_sec": 180,
-                "fee_config": {
-                    "type": 0,
-                    "gas_price": 2000000000000
-                },
-                "abi_dir": "configs/",
-                "contracts": [
-                    {
-                        "name": "relayer_authority", "address": "0xCf9f6428A309b6652a1dfaA4d8aB8B61C9c7E8CF",
-                        "abi_file": "abi.relayer.external.json", "deploy_height": 25067012
-                    },
-                    {
-                        "name": "vault", "address": "0x27C66cb5caa07C9B332939c357c789C606f5054C",
-                        "abi_file": "abi.vault.external.json", "deploy_height": 25067016
-                    },
-                    {
-                        "name": "socket", "address": "0x8039c3AD8ED55509fD3f6Daa78867923fDe6E61c",
-                        "abi_file": "abi.socket.external.json", "deploy_height": 25067020
-                    },
-                    {
-                        "name": "USDC_ON_BNB_TEST", "address": "0xC9C0aD3179eE2f4801454926ED5D6A2Da30b56FB",
-                        "abi_file": "abi.erc20.json"
-                    }
-                ],
-                "events": [
-                    {
-                        "contract_name": "socket",
-                        "event_name": "Socket"
-                    }
-                ]
-            },
-            "MATIC_MUMBAI": {
-                "chain_name": "MATIC_MUMBAI",
-                "block_period_sec": 2,
-                "url_with_access_key": "a",
-                "bootstrap_latest_height": 30814949,
-                "block_aging_period": 3,
-                "transaction_block_delay": 5,
-                "receipt_max_try": 20,
-                "max_log_num": 1000,
-                "rpc_server_downtime_allow_sec": 180,
-                "fee_config": {
-                    "type": 2,
-                    "max_gas_price": 2000000000000,
-                    "max_priority_price": 1000000000000
-                },
-                "abi_dir": "configs/", "contracts": [
-                    {
-                        "name": "relayer_authority", "address": "0x2FD5232fDFa6e1c127e7821CC48108Ca79281a38",
-                        "abi_file": "abi.relayer.external.json", "deploy_height": 28954662
-                    },
-                    {
-                        "name": "vault", "address": "0xB2ba0020560cF6c164DC48D1E29559AbA8472208",
-                        "abi_file": "abi.vault.external.json", "deploy_height": 30814945
-                    },
-                    {
-                        "name": "socket", "address": "0xA25357F3C313Bd13885678f935178211f0dF6722",
-                        "abi_file": "abi.socket.external.json", "deploy_height": 30814949
-                    }
-                ],
-                "events": [
-                    {
-                        "contract_name": "socket",
-                        "event_name": "Socket"
-                    }
-                ]
-            },
-            "entity": {
-                "role": "slow-relayer",
-                "account_name": "relayer-launched-on-console",
-                "slow_relayer_delay_sec": 180,
-                "secret_hex": "",
-                "supporting_chains": [
-                    "BFC_TEST",
-                    "ETH_GOERLI",
-                    "BNB_TEST",
-                    "MATIC_MUMBAI"
-                ]
-            },
-            "multichain_config": {
-                "chain_monitor_period_sec": 20
-            }
-        }
-
-    def test_check_chain_name(self):
-        ConfigChecker.check_config(self.config)
+            self.check_chain_config(chain_name)
