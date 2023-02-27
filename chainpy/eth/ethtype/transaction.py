@@ -276,19 +276,3 @@ EthTransactionListMeta = config(
     decoder=lambda values: [decode_transaction(value) for value in values],
     encoder=lambda values: [encode_transaction(value) for value in values]
 )
-
-
-def check_transaction_verbosity(values: list):
-    if len(values) == 0:
-        return False
-
-    criteria = values[0]
-    if isinstance(criteria, EthTransaction):
-        return criteria.block_hash != EthHashBytes.default()
-    else:
-        if isinstance(criteria, dict):
-            return True
-        elif isinstance(criteria, str) and is_hex(criteria):
-            return False
-        else:
-            raise EthTypeError(Optional[dict, str], type(criteria))

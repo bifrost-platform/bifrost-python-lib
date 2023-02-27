@@ -1,19 +1,19 @@
 import json
-from json import JSONDecodeError
-
 import requests
 import time
-from typing import List, Optional, Union, Callable, Tuple
-
+from typing import List, Optional, Union, Callable
+from json import JSONDecodeError
 from requests import Response
 
-from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpCMaxRetry
-from .utils import merge_dict
-from ..ethtype.amount import EthAmount
 from bridgeconst.consts import Chain
+
+from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpCMaxRetry
+from .utils import merge_dict, reduce_height_to_matured_height, hex_height_or_latest
+from ..ethtype.amount import EthAmount
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
-from ..ethtype.chaindata import EthBlock, EthReceipt, EthLog
+from ..ethtype.block import EthBlock
 from ..ethtype.exceptions import *
+from ..ethtype.receipt import EthReceipt, EthLog
 from ..ethtype.transaction import EthTransaction
 from ...logger import global_logger
 from ...prometheus_metric import PrometheusExporter
@@ -25,22 +25,6 @@ DEFAULT_BLOCK_PERIOD_SECS: int = 3
 DEFAULT_BLOCK_AGING_BLOCKS: int = 1
 DEFAULT_RPC_DOWN_ALLOW_SECS: int = 180
 DEFAULT_RPC_TX_BLOCK_DELAY: int = 2
-
-
-def _reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
-    if height == "latest":
-        height = 2 ** 256 - 1
-    if isinstance(height, int):
-        return hex(min(height, matured_max_height))
-    raise Exception("height should be integer or \"latest\"")
-
-
-def _hex_height_or_latest(height: Union[int, str] = "latest") -> str:
-    if height == "latest":
-        return height
-    if isinstance(height, int):
-        return hex(height)
-    raise Exception("height should be integer or \"latest\"")
 
 
 class EthRpcClient:
@@ -202,12 +186,12 @@ class EthRpcClient:
 
         if not isinstance(heights, list):
             # for single height
-            return _reduce_height_to_matured_height(matured_max_height, heights)
+            return reduce_height_to_matured_height(matured_max_height, heights)
         else:
             # for multi heights
             amended_heights = list()
             for height in heights:
-                amended_height = _reduce_height_to_matured_height(matured_max_height, height)
+                amended_height = reduce_height_to_matured_height(matured_max_height, height)
                 amended_heights.append(amended_height)
             return amended_heights
 
@@ -248,7 +232,7 @@ class EthRpcClient:
         return self._get_block("eth_getBlockByHash", [block_hash.hex(), verbose])
 
     def eth_get_block_by_height(self, height: Union[int, str] = "latest", verbose: bool = False) -> Optional[EthBlock]:
-        height_hex_or_latest = _hex_height_or_latest(height)
+        height_hex_or_latest = hex_height_or_latest(height)
         return self._get_block("eth_getBlockByNumber", [height_hex_or_latest, verbose])
 
     def _get_transaction(self, method: str, params: list) -> Optional[EthTransaction]:
@@ -375,7 +359,7 @@ class EthRpcClient:
         return int(resp, 16)
 
     def eth_get_user_nonce(self, address: EthAddress, height: Union[int, str] = "latest") -> int:
-        height_hex_or_latest = _hex_height_or_latest(height)
+        height_hex_or_latest = hex_height_or_latest(height)
         if not isinstance(address, EthAddress):
             raise Exception("address type must be \"EthAddress\" type")
         resp = self.send_request("eth_getTransactionCount", [address.hex(), height_hex_or_latest])

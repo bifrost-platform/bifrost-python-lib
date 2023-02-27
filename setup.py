@@ -15,5 +15,6 @@ setup(
         "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@0.2.1",
         "python-dotenv==0.16.0",
         "jsonpath-ng"
+        "jsonrpcserver"
     ]
 )
