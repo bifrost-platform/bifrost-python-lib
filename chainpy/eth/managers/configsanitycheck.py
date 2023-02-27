@@ -231,7 +231,7 @@ class ConfigSanityChecker:
             self.delete_key_safe(abi_files_expr)
 
             deploy_height_expr = parse("{}.contracts[*].deploy_height".format(chain_name))
-            self.check_valid_type(deploy_height_expr, int, key_required=False, value_default_allow=False)
+            self.check_valid_type(deploy_height_expr, int, key_required=False, value_default_allow=True)
             self.delete_key_safe(deploy_height_expr)
 
             self.raise_exception_if_not_empty(contracts_expr)
