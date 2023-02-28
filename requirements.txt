@@ -12,3 +12,4 @@ jsonrpcserver
 fastapi
 uvicorn
 starlette
+psutil

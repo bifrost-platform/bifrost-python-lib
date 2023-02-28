@@ -2,6 +2,7 @@ import psutil
 
 
 def kill_by_file_name(file_name: str) -> bool:
+    killed = False
     for proc in psutil.process_iter():
         try:
             process_name = proc.name()
@@ -17,11 +18,10 @@ def kill_by_file_name(file_name: str) -> bool:
                     for child in parent.children(recursive=True):
                         child.kill()
                     parent.kill()
-                    return True
-
+                    killed = True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):   #예외처리
             pass
-    return False
+    return killed
 
 
 if __name__ == "__main__":
