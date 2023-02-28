@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request, Response
 from jsonrpcserver import Result, Success, dispatch, method
 from starlette import status
 
-ENDPOINT_BASE_URL = "http://localhost"
+ENDPOINT_BASE_URL = "http://127.0.0.1"
 ENDPOINT_PORT = 5001
 ENDPOINT_URL = ENDPOINT_BASE_URL + ":" + str(ENDPOINT_PORT)
 
@@ -23,7 +23,6 @@ def eth_chainId() -> Result:
 
 @method
 def server_error_503() -> Result:
-    print(3)
     return Success(EMPTY_RESPONSE)
 
 
@@ -46,10 +45,9 @@ def server_error_404() -> Result:
 async def index(request: Request):
     req_body = await request.body()
     resp = Response(dispatch(req_body))
-
     rpc_method = json.loads(req_body.decode())["method"]
-    if rpc_method == "server_error_503":
-        resp.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    if rpc_method.startswith("server_error"):
+        resp.status_code = int(rpc_method.split("_")[-1])
 
     return resp
 

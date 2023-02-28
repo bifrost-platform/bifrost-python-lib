@@ -106,6 +106,10 @@ class EthRpcClient:
     def url(self) -> str:
         return self.__url_with_access_key
 
+    @url.setter
+    def url(self, url: str):
+        self.__url_with_access_key = url
+
     @property
     def tx_commit_time_sec(self) -> int:
         return self.__block_period_sec * (self.__transaction_block_delay + self.__block_aging_period)

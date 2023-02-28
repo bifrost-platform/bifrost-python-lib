@@ -77,7 +77,7 @@ config_fixture = {
             },
             {
                 "name": "socket", "address": "0xeF5260Db045200142a6B5DDB297e860099ffd51d",
-                "abi_file": "abi.socket.external.json", "deploy_height": 8052951
+                "abi_file": "abi.socket.external.json", "deploy_height": 0
             },
             {
                 "name": "BFC_ON_ETH_GOERLI", "address": "0x3A815eBa66EaBE966a6Ae7e5Df9652eca24e9c54",
