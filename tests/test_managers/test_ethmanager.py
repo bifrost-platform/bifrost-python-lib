@@ -1,20 +1,21 @@
 import json
-import os
 import unittest
-from time import sleep
 
-from chainpy.eth.managers.consts import DEFAULT_BLOCK_PERIOD_SECS, DEFAULT_RPC_TX_BLOCK_DELAY, \
+from chainpy.eth.managers.consts import (
+    DEFAULT_BLOCK_PERIOD_SECS,
+    DEFAULT_RPC_TX_BLOCK_DELAY,
     DEFAULT_BLOCK_AGING_BLOCKS
+)
 from chainpy.eth.managers.ethchainmanager import EthChainManager
-from tests.rpcendpointmock.procutil import kill_by_file_name
 from tests.rpcendpointmock.rpcserver import MOCK_CHAIN_ID, ENDPOINT_URL
+from tests.rpcendpointmock.util import *
 
 
 class TestEthManager(unittest.TestCase):
     def setUp(self) -> None:
         # launch mocking server
         self.server_launch_file_name = "../rpcendpointmock/rpcserver.py"
-        self.launch_mock_server()
+        launch_mock_server(self.server_launch_file_name)
 
         self.test_chain_name = "TestChain"
         with open("../configs-event-test/entity.test.json", "r") as f:
@@ -24,13 +25,6 @@ class TestEthManager(unittest.TestCase):
         self.cli = EthChainManager.from_config_dict(chain_config)
         self.dummy_private_key = "0x01"
         self.expected_address = "0x7e5f4552091a69125d5dfcb7b8c2659029395bdf"
-
-    def launch_mock_server(self):
-        if kill_by_file_name(self.server_launch_file_name):
-            print("[UnitTest] The server already exists -> killed it and relaunch the server")
-        os.system("python {} &".format(self.server_launch_file_name))
-        sleep(3)
-        print("The server launched")
 
     def tearDown(self) -> None:
         result = kill_by_file_name(self.server_launch_file_name)
