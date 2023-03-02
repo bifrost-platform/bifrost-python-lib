@@ -48,8 +48,8 @@
             }
         ]
     },
-    "ETH_GOERLI": {
-        "chain_name": "ETH_GOERLI",
+    "RESERVED_01": {
+        "chain_name": "RESERVED_01",
         "block_period_sec": 3,
         "url_with_access_key": "http://localhost:5001",
         "rpc_server_downtime_allow_sec": 3
