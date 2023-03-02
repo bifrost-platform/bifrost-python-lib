@@ -2,28 +2,25 @@ import os
 import unittest
 from time import sleep
 
+from chainpy.eth.managers.consts import *
 from chainpy.eth.ethtype.amount import EthAmount
 from chainpy.eth.ethtype.hexbytes import EthHashBytes, EthAddress
 from chainpy.eth.ethtype.transaction import EthTransaction
-from chainpy.eth.managers.consts import *
 from chainpy.eth.managers.exceptions import RpcOutOfStatusCode, RpCMaxRetry
-from tests.rpcendpointmock.procutil import kill_by_file_name
-
-from bridgeconst.consts import Chain
 from chainpy.eth.managers.rpchandler import EthRpcClient
 
-from rpcendpointmock.rpcserver import *
+from tests.rpcendpointmock.procutil import kill_by_file_name
+from tests.rpcendpointmock.rpcserver import *
 
 
 class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
         # launch mocking server
-        self.server_launch_file_name = "rpcendpointmock/rpcserver.py"
+        self.server_launch_file_name = "../rpcendpointmock/rpcserver.py"
         self.launch_mock_server()
 
         self.cli = EthRpcClient.from_config_files(
-            "./configs-event-test/entity.test.json",
-            chain=Chain.RESERVED_01.name
+            "../configs-event-test/entity.test.json"
         )
         self.cli.url = ENDPOINT_URL
         self.block_hash = EthHashBytes(TEST_BLOCK_HASH)
@@ -44,7 +41,7 @@ class TestContractHandler(unittest.TestCase):
     def test_cli_init(self):
         self.assertEqual(self.cli.chain_id, int(MOCK_CHAIN_ID, 16))
         self.assertEqual(self.cli.url, ENDPOINT_URL)
-        self.assertEqual(self.cli.chain_name, Chain.RESERVED_01.name)
+        self.assertEqual(self.cli.chain_name, "RESERVED_01")
         self.assertEqual(self.cli.resend_delay_sec, 3)
 
         expected_tx_commit_time = DEFAULT_BLOCK_PERIOD_SECS * (DEFAULT_RPC_TX_BLOCK_DELAY + DEFAULT_BLOCK_AGING_BLOCKS)

@@ -11,7 +11,7 @@ from chainpy.eth.managers.contracthandler import EthContractHandler
 class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
         self.cli = EthContractHandler.from_config_files(
-            "./configs-event-test/entity.test.json",
+            "../configs-event-test/entity.test.json",
             chain=Chain.BFC_TEST
         )
         self.contract_addr1 = EthAddress(0x8Af2242724343Bd203B372F492d64AA8B0b0fFF2)
