@@ -108,7 +108,7 @@ class ChainEventABC(metaclass=ABCMeta):
 
     @property
     def on_chain(self) -> Chain:
-        return self.__detected_event.chain_index
+        return self.__detected_event.chain_name
 
     @property
     def task_status(self) -> TaskStatus:

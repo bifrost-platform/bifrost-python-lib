@@ -1,13 +1,12 @@
 from typing import Union
 
-from ..ethtype.chaindata import EthLog
-from bridgeconst.consts import Chain
+from ..ethtype.receipt import EthLog
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 
 
 class DetectedEvent:
-    def __init__(self, chain_index: Chain, contract_name: str, event_name: str, log: EthLog):
-        self.chain_index = chain_index
+    def __init__(self, chain_name: str, contract_name: str, event_name: str, log: EthLog):
+        self.chain_name = chain_name
         self.contract_name = contract_name
         self.event_name = event_name
         self.log = log
@@ -16,19 +15,19 @@ class DetectedEvent:
         return "{}({}_on_{}:{})".format(
             self.__class__.__name__,
             self.event_name,
-            self.chain_index.name,
+            self.chain_name,
             self.log.data.hex()
         )
 
     @classmethod
     def from_dict(cls, detected_event_dict: dict):
-        chain_index = Chain.from_name(detected_event_dict["chain_name"].upper())
+        chain_name = detected_event_dict["chain_name"]
         log_obj = EthLog.from_dict(detected_event_dict["log"])
-        return cls(chain_index, detected_event_dict["contract_name"], detected_event_dict["event_name"], log_obj)
+        return cls(chain_name, detected_event_dict["contract_name"], detected_event_dict["event_name"], log_obj)
 
     def to_dict(self) -> dict:
         return {
-            "chain_name": self.chain_index.name,
+            "chain_name": self.chain_name,
             "contract_name": self.contract_name,
             "event_name": self.event_name,
             "log": self.log.to_dict()

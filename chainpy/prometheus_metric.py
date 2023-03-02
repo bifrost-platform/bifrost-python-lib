@@ -1,6 +1,5 @@
 from typing import Dict
 from prometheus_client import Gauge, start_http_server
-from bridgeconst.consts import Chain
 
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"
 SENDER_ALIVE_QUERY_NAME = "relayer_sender_alive"
@@ -36,11 +35,11 @@ class PrometheusExporter:
             raise Exception("Not supported thread_type")
 
     @staticmethod
-    def exporting_rpc_requested(chain_index: Chain):
+    def exporting_rpc_requested(chain: str):
         if not PrometheusExporter.PROMETHEUS_ON:
             return
 
-        chain_name = chain_index.name.lower()
+        chain_name = chain.lower()
         if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
             PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
             PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
@@ -49,11 +48,11 @@ class PrometheusExporter:
         PrometheusExporter.RPC_REQUESTED.labels(chain_name).inc()
 
     @staticmethod
-    def exporting_rpc_failed(chain_index: Chain):
+    def exporting_rpc_failed(chain_index: str):
         if not PrometheusExporter.PROMETHEUS_ON:
             return
 
-        chain_name = chain_index.name.lower()
+        chain_name = chain_index.lower()
         if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
             PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
             PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
