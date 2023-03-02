@@ -44,7 +44,7 @@ class TestContractHandler(unittest.TestCase):
     def test_cli_init(self):
         self.assertEqual(self.cli.chain_id, int(MOCK_CHAIN_ID, 16))
         self.assertEqual(self.cli.url, ENDPOINT_URL)
-        self.assertEqual(self.cli.chain, Chain.RESERVED_01.name)
+        self.assertEqual(self.cli.chain_name, Chain.RESERVED_01.name)
         self.assertEqual(self.cli.resend_delay_sec, 3)
 
         expected_tx_commit_time = DEFAULT_BLOCK_PERIOD_SECS * (DEFAULT_RPC_TX_BLOCK_DELAY + DEFAULT_BLOCK_AGING_BLOCKS)

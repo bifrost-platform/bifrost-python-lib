@@ -1,67 +1,65 @@
 from typing import Union, Optional
 
-from bridgeconst.consts import Chain
-
 
 class CustomException(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
-        super().__init__("[{}] {}".format(related_chain.name, msg))
+    def __init__(self, related_chain: str, msg: str):
+        super().__init__("[{}] {}".format(related_chain, msg))
 
 
 class RpCMaxRetry(CustomException):
-    def __init__(self, related_chain: Chain, msg: str):
+    def __init__(self, related_chain: str, msg: str):
         super().__init__(related_chain, msg)
 
 
 class RpcOutOfStatusCode(CustomException):
-    def __init__(self, related_chain: Chain, msg: str):
+    def __init__(self, related_chain: str, msg: str):
         super().__init__(related_chain, msg)
 
 
 class RpcErrorResult(CustomException):
-    def __init__(self, related_chain: Chain, msg: str):
+    def __init__(self, related_chain: str, msg: str):
         super().__init__(related_chain, msg)
 
 
 class RpcNoneResult(CustomException):
-    def __init__(self, related_chain: Chain, msg: str):
+    def __init__(self, related_chain: str, msg: str):
         super().__init__(related_chain, msg)
 
 
 class EstimateGasError(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
-        super().__init__("[{}] {}".format(related_chain.name, msg))
+    def __init__(self, related_chain: str, msg: str):
+        super().__init__("[{}] {}".format(related_chain, msg))
 
 
 class EthAlreadyImported(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
-        super().__init__("[{}] {}".format(related_chain.name, msg))
+    def __init__(self, related_chain: str, msg: str):
+        super().__init__("[{}] {}".format(related_chain, msg))
 
 
 class RpcEVMError(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
+    def __init__(self, related_chain: str, msg: str):
         parsed_msg = msg.replace("VM Exception while processing transaction: ", "")
         parsed_msg = parsed_msg.replace("execution reverted: ", "")
-        super().__init__("[{}] {}".format(related_chain.name, parsed_msg))
+        super().__init__("[{}] {}".format(related_chain, parsed_msg))
 
 
 class ReplaceTransactionUnderpriced(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
-        super().__init__("[{}] {}".format(related_chain.name, msg))
+    def __init__(self, related_chain: str, msg: str):
+        super().__init__("[{}] {}".format(related_chain, msg))
 
 
 class NonceTooLow(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
-        super().__init__("[{}] {}".format(related_chain.name, msg))
+    def __init__(self, related_chain: str, msg: str):
+        super().__init__("[{}] {}".format(related_chain, msg))
 
 
 class EthFeeCapError(Exception):
-    def __init__(self, related_chain: Chain, msg: str):
-        super().__init__("[{}] {}".format(related_chain.name, msg))
+    def __init__(self, related_chain: str, msg: str):
+        super().__init__("[{}] {}".format(related_chain, msg))
 
 
 def raise_integrated_exception(
-        chain: Chain,
+        chain: str,
         e: Exception = None,
         error_json: Optional[Union[str, dict]] = None,
         is_none_result: bool = False
@@ -92,4 +90,4 @@ def raise_integrated_exception(
     elif error_msg.startswith("submit transaction to pool failed: Pool(InvalidTransaction"):
         raise NonceTooLow(chain, error_msg)
     else:
-        raise Exception("Not handled error on {}: {}".format(chain.name, error_msg))
+        raise Exception("Not handled error on {}: {}".format(chain, error_msg))

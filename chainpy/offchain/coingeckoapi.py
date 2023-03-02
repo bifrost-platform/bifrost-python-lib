@@ -1,9 +1,9 @@
 import unittest
 from typing import List, Tuple
 
+from chainpy.offchain.consts.coingeckoconst import COINGECKO_SYMBOL_TO_QUERY_ID
 from .utils import restore_replace
 from ..eth.ethtype.amount import EthAmount
-from chainpy.offchain.consts.coingeckoconst import COINGECKO_SYMBOL_TO_QUERY_ID
 from ..offchain.priceapiabc import PriceApiABC, QueriedData, Symbol, QueryId, Price, Volume
 
 

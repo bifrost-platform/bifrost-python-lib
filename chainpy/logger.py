@@ -5,9 +5,8 @@ from datetime import datetime
 import logging.handlers
 import unittest
 
-from bridgeconst.consts import Chain
-
 from chainpy.eth.ethtype.hexbytes import EthAddress
+from chainpy.eth.managers.consts import *
 
 
 class LoggerConfig:
@@ -129,14 +128,14 @@ class Logger:
             self,
             log_id: str,
             address: EthAddress = None,
-            related_chain: Chain = Chain.NONE,
+            related_chain: str = DEFAULT_CHAIN_NAME,
             msg: str = None
     ):
         if log_id is None:
             return
         msg = "{}:{}:{}".format(
             address.hex()[:10] if address is not None else "NoAddress",
-            related_chain.name,
+            related_chain,
             msg
         )
         self.info(log_id, msg)

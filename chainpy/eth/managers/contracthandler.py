@@ -1,9 +1,8 @@
 from typing import List, Optional, Dict, Any, Union
 
 from .utils import merge_dict
-from bridgeconst.consts import Chain
 
-from ..ethtype.chaindata import EthLog
+from ..ethtype.receipt import EthLog
 from ..ethtype.contract import EthContract
 from ..ethtype.exceptions import RpcExceedRequestTime
 from ..ethtype.hexbytes import EthAddress, EthHashBytes
@@ -49,7 +48,7 @@ class EthContractHandler(EthRpcClient):
             self,
             url_with_access_key: str,
             contracts: List[Dict[str, str | int]],
-            chain: Chain,
+            chain_name: str,
             abi_dir: str = None,
             receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
@@ -62,7 +61,7 @@ class EthContractHandler(EthRpcClient):
     ):
         super().__init__(
             url_with_access_key,
-            chain,
+            chain_name,
             receipt_max_try,
             block_period_sec,
             block_aging_period,
@@ -111,26 +110,17 @@ class EthContractHandler(EthRpcClient):
                     self._event_db[event_name].append(data)
 
     @classmethod
-    def from_config_dict(cls, config: dict, private_config: dict = None, chain: Chain = None):
+    def from_config_dict(cls, config: dict, private_config: dict = None):
         """ Initiate class after combining public and private configurations """
-        merged_config = merge_dict(config, private_config)
-        if merged_config.get("chain_name") is not None:
-            # In the case of being entered chain_config
-            chain = Chain.from_name(merged_config.get("chain_name").upper())
-            chain_config = merged_config
-        elif chain is not None:
-            # In the case of being entered multichain_config
-            chain_config = merged_config.get(chain.name)
-            if chain_config is None:
-                # there is no target chain-config in multichain_config
-                raise Exception("should be inserted chain config")
-        else:
-            raise Exception("Can not determine the target chain")
+        chain_config = merge_dict(config, private_config)
+        chain_name = chain_config.get("chain_name")
+        if chain_name is None:
+            raise Exception("Chain name is required")
 
         return cls(
             url_with_access_key=chain_config["url_with_access_key"],
             contracts=chain_config["contracts"],
-            chain=chain,
+            chain_name=chain_name,
             abi_dir=chain_config.get("abi_dir"),
             receipt_max_try=chain_config.get("receipt_max_try"),
             block_period_sec=chain_config.get("block_period_sec"),
@@ -239,7 +229,7 @@ class EthContractHandler(EthRpcClient):
             event_name = self.get_event_name_by_topic(fetched_topic)
 
             # build event object and collect it (to return)
-            detected_event = DetectedEvent(self.chain, contract_name, event_name, log)
+            detected_event = DetectedEvent(self.chain_name, contract_name, event_name, log)
             historical_logs.append(detected_event)
 
         return historical_logs

@@ -32,14 +32,14 @@ class EthRpcClient:
     def __init__(
             self,
             url_with_access_key: str,
-            chain: str = DEFAULT_CHAIN_NAME,
+            chain_name: str = DEFAULT_CHAIN_NAME,
             receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
             transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY
     ):
-        self.__chain: str = chain
+        self.__chain: str = chain_name
         self.__url_with_access_key = url_with_access_key
         self.__receipt_max_try = DEFAULT_RECEIPT_MAX_RETRY if receipt_max_try is None else receipt_max_try
         self.__block_period_sec = DEFAULT_BLOCK_PERIOD_SECS if block_period_sec is None else block_period_sec
@@ -59,27 +59,23 @@ class EthRpcClient:
             self.__chain_id = int(resp, 16)
 
     @classmethod
-    def from_config_dict(cls, config: dict, private_config: dict = None, chain: str = DEFAULT_CHAIN_NAME):
-        merged_config = merge_dict(config, private_config)
-
-        if merged_config.get("chain_name") is None and chain is None:
-            # multichain config and no chain index
-            raise Exception("should be inserted chain config")
-
-        if merged_config.get("chain_name") is None:
-            merged_config = merged_config[chain.upper()]
+    def from_config_dict(cls, config: dict, private_config: dict = None):
+        chain_config = merge_dict(config, private_config)
+        chain_name = chain_config.get("chain_name")
+        if chain_name is None:
+            raise Exception("Chain name is required")
 
         return cls(
-            merged_config["url_with_access_key"],
-            chain,
-            merged_config.get("receipt_max_try"),
-            merged_config.get("block_period_sec"),
-            merged_config.get("block_aging_period"),
-            merged_config.get("rpc_server_downtime_allow_sec")
+            chain_config["url_with_access_key"],
+            chain_name,
+            chain_config.get("receipt_max_try"),
+            chain_config.get("block_period_sec"),
+            chain_config.get("block_aging_period"),
+            chain_config.get("rpc_server_downtime_allow_sec")
         )
 
     @classmethod
-    def from_config_files(cls, config_file: str, private_config_file: str = None, chain: str = DEFAULT_CHAIN_NAME):
+    def from_config_files(cls, config_file: str, private_config_file: str = None):
         with open(config_file, "r") as f:
             config = json.load(f)
         if private_config_file is None:
@@ -87,7 +83,7 @@ class EthRpcClient:
         else:
             with open(private_config_file, "r") as f:
                 private_config = json.load(f)
-        return cls.from_config_dict(config, private_config, chain)
+        return cls.from_config_dict(config, private_config)
 
     @property
     def url(self) -> str:
@@ -110,7 +106,7 @@ class EthRpcClient:
         return self.__block_period_sec * (self.__transaction_block_delay + self.__block_aging_period)
 
     @property
-    def chain(self) -> str:
+    def chain_name(self) -> str:
         """ return chain index specified from the configuration. """
         return self.__chain
 
@@ -121,7 +117,7 @@ class EthRpcClient:
 
     def send_request_base(self, method: str, params: list, cnt: int = 0) -> Response:
         if cnt > RPC_MAX_RESEND_ITER:
-            raise RpCMaxRetry(self.chain, "Exceeded max re-try cnt")
+            raise RpCMaxRetry(self.chain_name, "Exceeded max re-try cnt")
 
         body = {
             "jsonrpc": "2.0",
@@ -131,13 +127,13 @@ class EthRpcClient:
         }
         headers = {'Content-type': 'application/json'}
 
-        PrometheusExporter.exporting_rpc_requested(self.chain)
+        PrometheusExporter.exporting_rpc_requested(self.chain_name)
         self.call_num += 1
 
         response = requests.post(self.url, json=body, headers=headers)
         code = response.status_code
         if code < 200 or 400 < code:
-            raise RpcOutOfStatusCode(self.chain, "code({}), msg({})".format(code, response.content))
+            raise RpcOutOfStatusCode(self.chain_name, "code({}), msg({})".format(code, response.content))
 
         return response
 
@@ -152,7 +148,7 @@ class EthRpcClient:
                 break
             except RpcOutOfStatusCode or JSONDecodeError as e:
                 # export log for out-of-status error
-                PrometheusExporter.exporting_rpc_failed(self.chain)
+                PrometheusExporter.exporting_rpc_failed(self.chain_name)
                 global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=str(e))
 
                 # sleep
@@ -168,21 +164,21 @@ class EthRpcClient:
                     raise e
 
             except RpCMaxRetry:
-                raise RpCMaxRetry(self.chain, "Exceeded max re-try cnt")
+                raise RpCMaxRetry(self.chain_name, "Exceeded max re-try cnt")
 
             except Exception as e:
                 # raise not handled exception
-                raise_integrated_exception(self.chain, e)
+                raise_integrated_exception(self.chain_name, e)
 
         if "result" in list(response_json.keys()):
             return response_json["result"]
 
         # Evm error always gets caught here.
-        PrometheusExporter.exporting_rpc_failed(self.chain)
+        PrometheusExporter.exporting_rpc_failed(self.chain_name)
         if "error" in list(response_json.keys()):
-            raise_integrated_exception(self.chain, error_json=response_json["error"])
+            raise_integrated_exception(self.chain_name, error_json=response_json["error"])
         else:
-            raise Exception("Not handled error on {}: {}".format(self.chain, response.content))
+            raise Exception("Not handled error on {}: {}".format(self.chain_name, response.content))
 
     def amend_height_to_matured_height(self, height: Union[int, str]) -> Union[List[str], str]:
         """
