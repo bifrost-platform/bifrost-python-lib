@@ -189,9 +189,9 @@ class EthRpcClient:
         if height == "latest":
             return hex(matured_max_height)
         elif isinstance(height, int):
-            return hex(max(height, matured_max_height))
+            return hex(min(height, matured_max_height))
         elif isinstance(height, str):
-            return hex(max(int(height, 16), matured_max_height))
+            return hex(min(int(height, 16), matured_max_height))
         else:
             raise Exception("Invalid type of height: {}".format(height))
 
