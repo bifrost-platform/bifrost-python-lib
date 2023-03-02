@@ -1,8 +1,13 @@
 import threading
 from typing import Optional, Union, List
 
-from .rpchandler import DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, DEFAULT_BLOCK_AGING_BLOCKS, \
-    DEFAULT_RPC_RESEND_DELAY_SEC, DEFAULT_RPC_TX_BLOCK_DELAY
+from .rpchandler import (
+    DEFAULT_RECEIPT_MAX_RETRY,
+    DEFAULT_BLOCK_PERIOD_SECS,
+    DEFAULT_BLOCK_AGING_BLOCKS,
+    DEFAULT_RPC_RESEND_DELAY_SEC,
+    DEFAULT_RPC_TX_BLOCK_DELAY
+)
 
 from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.amount import EthAmount
@@ -27,7 +32,7 @@ class EthChainManager(EthContractHandler):
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
-            transaction_commit_multiplier: int = DEFAULT_RPC_TX_BLOCK_DELAY,
+            transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY,
 
             events: List[dict] = None,
             latest_height: int = 0,
@@ -44,7 +49,7 @@ class EthChainManager(EthContractHandler):
             block_period_sec,
             block_aging_period,
             rpc_server_downtime_allow_sec,
-            transaction_commit_multiplier,
+            transaction_block_delay,
             events,
             latest_height,
             max_log_num
@@ -79,7 +84,7 @@ class EthChainManager(EthContractHandler):
             chain_config.get("block_period_sec"),
             chain_config.get("block_aging_period"),
             chain_config.get("rpc_server_downtime_allow_sec"),
-            chain_config.get("transaction_commit_multiplier"),
+            chain_config.get("transaction_block_delay"),
 
             chain_config.get("events"),
             chain_config.get("bootstrap_latest_height"),
@@ -91,6 +96,10 @@ class EthChainManager(EthContractHandler):
     @property
     def account(self) -> Optional[EthAccount]:
         return self.__account
+
+    @property
+    def address(self) -> Optional[EthAddress]:
+        return None if self.__account is None else self.__account.address
 
     def set_account(self, private_key: str):
         self.__account = EthAccount.from_secret(private_key)
@@ -268,5 +277,5 @@ class EthChainManager(EthContractHandler):
             raise Exception("No Account")
 
         if addr is None:
-            addr = self.account.address
+            addr = self.address
         return self.eth_get_balance(addr)
