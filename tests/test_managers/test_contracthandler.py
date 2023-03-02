@@ -1,7 +1,6 @@
+import json
 import unittest
 from typing import List
-
-from bridgeconst.consts import Chain
 
 from chainpy.eth.ethtype.hexbytes import EthAddress, EthHashBytes
 from chainpy.eth.ethtype.receipt import EthLog
@@ -10,10 +9,11 @@ from chainpy.eth.managers.contracthandler import EthContractHandler
 
 class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
-        self.cli = EthContractHandler.from_config_files(
-            "../configs-event-test/entity.test.json",
-            chain=Chain.BFC_TEST
-        )
+        with open("../configs-event-test/entity.test.json", "r") as f:
+            multichain_config = json.load(f)
+            chain_config = multichain_config["BFC_TEST"]
+
+        self.cli = EthContractHandler.from_config_dict(chain_config)
         self.contract_addr1 = EthAddress(0x8Af2242724343Bd203B372F492d64AA8B0b0fFF2)
         self.contract_name1 = "test_contract1"
         self.event_name1 = "TestEvent1"
@@ -24,8 +24,7 @@ class TestContractHandler(unittest.TestCase):
         self.event_name2 = "TestEvent2"
         self.topic2 = EthHashBytes("0xc98f871161824f7ebd6f185b9c0d6ec054c7d5c99a55182109148b69f67c59ec")
 
-        self.from_block, self.to_block = 3610000, 3636650
-
+        self.from_block, self.to_block = 4039032, 4039045
         self.cli.latest_height = self.from_block
 
     def test_properties(self):
@@ -50,7 +49,7 @@ class TestContractHandler(unittest.TestCase):
         event_names = self.cli.get_event_names()
         self.assertEqual(event_names, [self.event_name1, self.event_name2])
 
-        topic = self.cli.get_topic_by_event_name(self.event_name1)
+        topic = self.cli.get_topics_by_event_name(self.event_name1)
         self.assertEqual(topic, self.topic1)
 
         event_name = self.cli.get_event_name_by_topic(topic)
@@ -60,7 +59,7 @@ class TestContractHandler(unittest.TestCase):
         self.assertEqual(contract_addresses, [self.contract_addr1, self.contract_addr2])
 
         topics = self.cli.get_every_topics()
-        self.assertEqual(topics, [self.topic1, self.topic2])
+        self.assertEqual(topics, [[self.topic1, self.topic2]])
 
     def test_collect_event_in_limited_range(self):
         try:
@@ -78,7 +77,7 @@ class TestContractHandler(unittest.TestCase):
             self.assertEqual(str(e), "Not handled error on BFC_TEST: query timeout of 10 seconds exceeded")
 
     def _check_logs(self, logs: List[EthLog]):
-        self.assertEqual(len(logs), 8)
+        self.assertEqual(len(logs), 6)
         for log in logs:
             self.assertTrue(log.contract_name in [self.contract_name1, self.contract_name2])
             self.assertTrue(log.topic in [self.topic1, self.topic2])
@@ -89,7 +88,7 @@ class TestContractHandler(unittest.TestCase):
         before_call_num = self.cli.call_num
         logs = self.cli.collect_every_event_in_limited_range(self.from_block, self.to_block)
         self._check_logs(logs)
-        self.assertEqual(self.cli.call_num - before_call_num, 2)
+        self.assertEqual(self.cli.call_num - before_call_num, 3)
 
     def test_collect_every_event(self):
         self.assertNotEqual(self.to_block, self.cli.latest_height)
@@ -97,7 +96,7 @@ class TestContractHandler(unittest.TestCase):
         before_call_num = self.cli.call_num
         logs = self.cli.collect_every_event(self.from_block, self.to_block)
         self._check_logs(logs)
-        self.assertEqual(self.cli.call_num - before_call_num, 28)
+        self.assertEqual(self.cli.call_num - before_call_num, 3)
 
         self.assertNotEqual(self.to_block, self.cli.latest_height)
 

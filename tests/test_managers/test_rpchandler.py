@@ -19,9 +19,12 @@ class TestContractHandler(unittest.TestCase):
         self.server_launch_file_name = "../rpcendpointmock/rpcserver.py"
         self.launch_mock_server()
 
-        self.cli = EthRpcClient.from_config_files(
-            "../configs-event-test/entity.test.json"
-        )
+        self.test_chain_name = "TestChain"
+        with open("../configs-event-test/entity.test.json", "r") as f:
+            multichain_config = json.load(f)
+            chain_config = multichain_config[self.test_chain_name]
+
+        self.cli = EthRpcClient.from_config_dict(chain_config)
         self.cli.url = ENDPOINT_URL
         self.block_hash = EthHashBytes(TEST_BLOCK_HASH)
         self.tx_hash = EthHashBytes(TEST_TRANSACTION_HASH)
@@ -41,7 +44,7 @@ class TestContractHandler(unittest.TestCase):
     def test_cli_init(self):
         self.assertEqual(self.cli.chain_id, int(MOCK_CHAIN_ID, 16))
         self.assertEqual(self.cli.url, ENDPOINT_URL)
-        self.assertEqual(self.cli.chain_name, "RESERVED_01")
+        self.assertEqual(self.cli.chain_name, self.test_chain_name)
         self.assertEqual(self.cli.resend_delay_sec, 3)
 
         expected_tx_commit_time = DEFAULT_BLOCK_PERIOD_SECS * (DEFAULT_RPC_TX_BLOCK_DELAY + DEFAULT_BLOCK_AGING_BLOCKS)

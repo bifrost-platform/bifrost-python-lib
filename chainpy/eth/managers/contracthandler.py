@@ -13,6 +13,7 @@ from .rpchandler import EthRpcClient, DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_P
 
 DEFAULT_LATEST_HEIGHT = 0
 DEFAULT_MAX_LOG_NUM = 1000
+Topics = List[Union[EthHashBytes, List[EthHashBytes]]]
 
 
 class EthContractHandler(EthRpcClient):
@@ -167,16 +168,16 @@ class EthContractHandler(EthRpcClient):
     def get_event_names(self) -> List[str]:
         return list(self._event_db.keys())
 
-    def get_topic_by_event_name(self, event_name: str) -> EthHashBytes:
+    def get_topics_by_event_name(self, event_name: str) -> Topics:
         data = self._event_db.get(event_name)
         return data[0]["topic"]
 
-    def get_every_topics(self) -> List[EthHashBytes]:
+    def get_every_topics(self) -> Topics:
         topics = list()
         for data in self._event_db.values():
             for item in data:
                 topics.append(item["topic"])
-        return sorted(list(set(topics)))
+        return [sorted(list(set(topics)))]
 
     def get_event_name_by_topic(self, topic: EthHashBytes) -> Optional[str]:
         topic_hex = topic.hex()
@@ -205,7 +206,7 @@ class EthContractHandler(EthRpcClient):
         If the eth_get_logs exceeds request time, call twice with half range.
         """
         try:
-            raw_logs = self.eth_get_logs(from_block, to_block, emitter_addresses, [topics])
+            raw_logs = self.eth_get_logs(from_block, to_block, emitter_addresses, topics)
             return raw_logs
         except RpcExceedRequestTime:
             self._max_log_num = self._max_log_num // 2
@@ -235,10 +236,10 @@ class EthContractHandler(EthRpcClient):
         return historical_logs
 
     def collect_event_in_limited_range(self, event_name: str, from_block: int, to_block: int) -> List[DetectedEvent]:
-        """Collect the specific event. The input range [from_block, to_block] is used as it is without deformation."""
+        """ Collect one type of event emitted by all contracts registered in the config. """
         if to_block < from_block:
             raise Exception("from_block is bigger than to_block")
-        emitter_addresses, topic = self.get_emitter_addresses(event_name), self.get_topic_by_event_name(event_name)
+        emitter_addresses, topic = self.get_emitter_addresses(event_name), self.get_topics_by_event_name(event_name)
         logs = self._get_logs(from_block, to_block, emitter_addresses, [topic])
         return self._check_fetched_event(logs, emitter_addresses)
 
