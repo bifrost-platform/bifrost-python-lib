@@ -19,9 +19,11 @@ class MultiChainManager:
         self.__role = entity_config["role"].capitalize()
         self.__account_name = entity_config.get("account_name")
 
+        self.__active_account = None
         private_key = entity_config.get("secret_hex")
         if private_key is not None and private_key != "":
             self.__active_account = EthAccount.from_secret(private_key)
+
         self.__supported_chains = entity_config["supporting_chains"]
 
         # config for each chain
@@ -73,8 +75,12 @@ class MultiChainManager:
         return self.__account_name
 
     @property
-    def active_account(self) -> EthAccount:
+    def active_account(self) -> Optional[EthAccount]:
         return self.__active_account
+
+    @property
+    def address(self) -> Optional[EthAddress]:
+        return None if self.__active_account is None else self.__active_account.address
 
     @property
     def supported_chain_list(self) -> list:
@@ -136,7 +142,7 @@ class MultiChainManager:
 
     def world_balance(self, chain_name: str, asset: Asset = None, user_addr: EthAddress = None) -> EthAmount:
         chain_manager = self.get_chain_manager_of(chain_name)
-        addr = user_addr if user_addr is not None else self.active_account.address
+        addr = user_addr if user_addr is not None else self.address
         if asset is None or asset.is_coin():
             return chain_manager.native_balance(user_addr)
         else:

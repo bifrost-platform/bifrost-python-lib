@@ -55,7 +55,7 @@ class EthContractHandler(EthRpcClient):
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
-            transaction_commit_multiplier: int = DEFAULT_RPC_TX_BLOCK_DELAY,
+            transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY,
             events: List[dict] = None,
             latest_height: int = DEFAULT_LATEST_HEIGHT,
             max_log_num: int = DEFAULT_MAX_LOG_NUM
@@ -67,7 +67,7 @@ class EthContractHandler(EthRpcClient):
             block_period_sec,
             block_aging_period,
             rpc_server_downtime_allow_sec,
-            transaction_commit_multiplier
+            transaction_block_delay
         )
 
         self._latest_height = DEFAULT_LATEST_HEIGHT if latest_height is None else latest_height
