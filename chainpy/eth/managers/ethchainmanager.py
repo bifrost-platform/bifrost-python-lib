@@ -50,8 +50,7 @@ class EthChainManager(EthContractHandler):
             max_log_num
         )
 
-        # self.__chain_index = chain_index
-        self.__account = EthAccount.from_secret("0xbfc")
+        self.__account = None
         self.__nonce = 0
         self.__nonce_lock = threading.Lock()
 
@@ -67,9 +66,13 @@ class EthChainManager(EthContractHandler):
         if chain_config is None:
             raise Exception("Chain name is required")
 
+        contracts = chain_config.get("contracts")
+        if contracts is None:
+            contracts = []
+
         return cls(
             chain_config["url_with_access_key"],
-            chain_config["contracts"],
+            contracts,
             chain_name,
             chain_config.get("abi_dir"),
             chain_config.get("receipt_max_try"),
