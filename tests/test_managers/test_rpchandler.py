@@ -1,6 +1,4 @@
-import os
 import unittest
-from time import sleep
 
 from chainpy.eth.managers.consts import *
 from chainpy.eth.ethtype.amount import EthAmount
@@ -9,15 +7,15 @@ from chainpy.eth.ethtype.transaction import EthTransaction
 from chainpy.eth.managers.exceptions import RpcOutOfStatusCode, RpCMaxRetry
 from chainpy.eth.managers.rpchandler import EthRpcClient
 
-from tests.rpcendpointmock.procutil import kill_by_file_name
 from tests.rpcendpointmock.rpcserver import *
+from tests.rpcendpointmock.util import *
 
 
 class TestContractHandler(unittest.TestCase):
     def setUp(self) -> None:
         # launch mocking server
         self.server_launch_file_name = "../rpcendpointmock/rpcserver.py"
-        self.launch_mock_server()
+        launch_mock_server(self.server_launch_file_name)
 
         self.test_chain_name = "TestChain"
         with open("../configs-event-test/entity.test.json", "r") as f:
@@ -29,13 +27,6 @@ class TestContractHandler(unittest.TestCase):
         self.block_hash = EthHashBytes(TEST_BLOCK_HASH)
         self.tx_hash = EthHashBytes(TEST_TRANSACTION_HASH)
         self.tx_hash_waiting = EthHashBytes(TEST_ADDITIONAL_TX_HASH)
-
-    def launch_mock_server(self):
-        if kill_by_file_name(self.server_launch_file_name):
-            print("[UnitTest] The server already exists -> killed it and relaunch the server")
-        os.system("python {} &".format(self.server_launch_file_name))
-        sleep(3)
-        print("The server launched")
 
     def tearDown(self) -> None:
         result = kill_by_file_name(self.server_launch_file_name)
