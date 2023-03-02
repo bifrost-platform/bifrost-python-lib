@@ -4,16 +4,16 @@ import threading
 from time import sleep
 from typing import Optional, Union, Any, Type
 
-from .multichainmonitor import MultiChainMonitor
 from bridgeconst.consts import Chain
+
+from .multichainmonitor import MultiChainMonitor
+from .utils import timestamp_msec
+from .periodiceventabc import PeriodicEventABC
+from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.exceptions import RpcEVMError
 from ..logger import global_logger
-
-from .utils import timestamp_msec
-from .periodiceventabc import PeriodicEventABC
-from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 from ..prometheus_metric import PrometheusExporter
 
 
@@ -104,7 +104,7 @@ class EventBridge(MultiChainMonitor):
             next_event = event.clone_next()
             self.queue.enqueue(next_event)
 
-        if dst_chain == Chain.NONE or dst_chain is None:
+        if dst_chain == Chain.NONE or dst_chain == "" or dst_chain is None:
             return None
 
         try:

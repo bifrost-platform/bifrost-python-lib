@@ -2,11 +2,17 @@ from abc import ABCMeta, abstractmethod
 from typing import Optional, TYPE_CHECKING
 
 from bridgeconst.consts import Chain
-from ..eth.ethtype.hexbytes import EthHashBytes
 
-from .chaineventabc import TaskStatus, ReceiptParams, CallParams, CallParamTuple, SendParamTuple, \
+from .chaineventabc import (
+    TaskStatus,
+    ReceiptParams,
+    CallParams,
+    CallParamTuple,
+    SendParamTuple,
     BASIC_GAS_LIMIT_MULTIPLIER
+)
 from .utils import timestamp_msec
+from ..eth.ethtype.hexbytes import EthHashBytes
 
 if TYPE_CHECKING:
     from eventbridge import EventBridge
