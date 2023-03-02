@@ -119,6 +119,11 @@ def eth_getBalance(address: str, height: str) -> Result:
 
 
 @method
+def eth_getTransactionCount(addr: str, height: str):
+    return Success("0xa")
+
+
+@method
 def server_error_503() -> Result:
     return Success(EMPTY_RESPONSE)
 
