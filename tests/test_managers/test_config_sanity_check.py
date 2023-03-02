@@ -195,9 +195,9 @@ config_fixture = {
 
 class TestConfigSanityCheck1(unittest.TestCase):
     def setUp(self) -> None:
-        with open("configs-testnet/entity.relayer.json", "r") as f:
+        with open("../configs-testnet/entity.relayer.json", "r") as f:
             config = json.load(f)
-        with open("configs-testnet/entity.relayer.private.json", "r") as f:
+        with open("../configs-testnet/entity.relayer.private.json", "r") as f:
             private_config = json.load(f)
         config_from_file = merge_dict(config, private_config)
         self.checker = ConfigSanityChecker(config_from_file)
