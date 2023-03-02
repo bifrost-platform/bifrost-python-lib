@@ -39,14 +39,6 @@ def merge_dict(base_dict: dict, add_dict: dict):
     return base_dict
 
 
-def reduce_height_to_matured_height(matured_max_height: int, height: Union[int, str]) -> str:
-    if height == "latest":
-        height = 2 ** 256 - 1
-    if isinstance(height, int):
-        return hex(min(height, matured_max_height))
-    raise Exception("height should be integer or \"latest\"")
-
-
 def hex_height_or_latest(height: Union[int, str] = "latest") -> str:
     if height == "latest":
         return height

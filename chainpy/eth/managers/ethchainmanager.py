@@ -4,7 +4,7 @@ from typing import Optional, Union, List
 
 from .exceptions import raise_integrated_exception
 from .rpchandler import DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, DEFAULT_BLOCK_AGING_BLOCKS, \
-    DEFAULT_RPC_DOWN_ALLOW_SECS, DEFAULT_RPC_TX_BLOCK_DELAY
+    DEFAULT_RPC_RESEND_DELAY_SEC, DEFAULT_RPC_TX_BLOCK_DELAY
 from bridgeconst.consts import Chain
 from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.amount import EthAmount
@@ -28,7 +28,7 @@ class EthChainManager(EthContractHandler):
             receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
             block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
             block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
-            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_DOWN_ALLOW_SECS,
+            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
             transaction_commit_multiplier: int = DEFAULT_RPC_TX_BLOCK_DELAY,
 
             events: List[dict] = None,
