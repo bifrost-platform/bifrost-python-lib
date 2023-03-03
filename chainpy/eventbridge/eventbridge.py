@@ -12,6 +12,7 @@ from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 
 from ..eth.ethtype.hexbytes import EthHashBytes
+from ..eth.managers.consts import DEFAULT_CHAIN_NAME
 from ..eth.managers.exceptions import RpcEVMError
 from ..logger import global_logger
 from ..prometheus_metric import PrometheusExporter
@@ -98,24 +99,24 @@ class EventBridge(MultiChainMonitor):
 
     def _handle_send_event(self, event: SendEventABC) -> Optional[SendEventABC]:
         # build transaction using the event
-        dst_chain, contract_name, method_name, params = event.build_transaction_params()
+        dst_chain_name, contract_name, method_name, params = event.build_transaction_params()
 
         if isinstance(event, PeriodicEventABC):
             next_event = event.clone_next()
             self.queue.enqueue(next_event)
 
-        if dst_chain == Chain.NONE or dst_chain == "" or dst_chain is None:
+        if dst_chain_name == "" or dst_chain_name == DEFAULT_CHAIN_NAME or dst_chain_name is None:
             return None
 
         try:
             # build and send transaction
-            tx = self.world_build_transaction(dst_chain, contract_name, method_name, params)
-            tx_hash = self.world_send_transaction(dst_chain, tx, event.gas_limit_multiplier())
+            tx = self.world_build_transaction(dst_chain_name, contract_name, method_name, params)
+            tx_hash = self.world_send_transaction(dst_chain_name, tx, event.gas_limit_multiplier())
 
             global_logger.formatted_log(
                 "Consumer",
                 address=self.active_account.address,
-                related_chain=dst_chain,
+                related_chain=dst_chain_name,
                 msg="{}:txHash({}):nonce({})".format(event.summary(), tx_hash.hex(), tx.nonce)
             )
 
@@ -124,15 +125,16 @@ class EventBridge(MultiChainMonitor):
                 global_logger.formatted_log(
                     "Consumer",
                     address=self.active_account.address,
-                    related_chain=dst_chain,
+                    related_chain=dst_chain_name,
                     msg="{}:ZeroTxHash".format(event.summary())
                 )
                 event.time_lock = timestamp_msec() + 3000
                 self.queue.enqueue(event)
             else:
                 """ set receipt params to the event """
-                receipt_time_lock = timestamp_msec() + self.get_chain_manager_of(dst_chain).tx_commit_time_sec * 1000
-                event.switch_to_check_receipt(dst_chain, tx_hash, receipt_time_lock)
+                delay = self.get_chain_manager_of(dst_chain_name).tx_commit_time_sec * 1000
+                receipt_time_lock = timestamp_msec() + delay
+                event.switch_to_check_receipt(dst_chain_name, tx_hash, receipt_time_lock)
                 self.queue.enqueue(event)
 
         except RpcEVMError as e:
@@ -140,7 +142,7 @@ class EventBridge(MultiChainMonitor):
             global_logger.formatted_log(
                 "Evm",
                 address=self.active_account.address,
-                related_chain=dst_chain,
+                related_chain=dst_chain_name,
                 msg="{}:EvmError:{}".format(event.summary(), str(e))
             )
             # TODO does not update event when reverted poll filtered error occurs
@@ -149,7 +151,7 @@ class EventBridge(MultiChainMonitor):
 
     def _handle_receipt_event(self, event: SendEventABC):
         receipt_params: ReceiptParams = event.get_receipt_params()
-        receipt = self.world_receipt_with_wait(receipt_params.on_chain, receipt_params.tx_hash)
+        receipt = self.world_receipt_with_wait(receipt_params.on_chain_name, receipt_params.tx_hash)
 
         if receipt is None:
             updating_func = event.handle_tx_result_fail
@@ -166,7 +168,7 @@ class EventBridge(MultiChainMonitor):
         global_logger.formatted_log(
             "Receipt",
             address=self.active_account.address,
-            related_chain=receipt_params.on_chain,
+            related_chain=receipt_params.on_chain_name,
             msg="{}:receipt({}):{}".format(event.summary(), receipt_params.tx_hash.hex(), log_status)
         )
 
@@ -175,7 +177,7 @@ class EventBridge(MultiChainMonitor):
             global_logger.formatted_log(
                 "Receipt",
                 address=self.active_account.address,
-                related_chain=receipt_params.on_chain,
+                related_chain=receipt_params.on_chain_name,
                 msg="{}:RestartAfter{}Second".format(event.summary(), 60)
             )
             sleep(60)
