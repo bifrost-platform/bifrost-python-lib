@@ -18,30 +18,30 @@ BASIC_GAS_LIMIT_MULTIPLIER = 1.2
 
 class ReceiptParams:
     def __init__(self, target_chain_name: str, tx_hash: EthHashBytes):
-        self.__on_chain = target_chain_name
+        self.__on_chain_name = target_chain_name
         self.__tx_hash = tx_hash
 
     @property
-    def on_chain(self) -> str:
-        return self.__on_chain
+    def on_chain_name(self) -> str:
+        return self.__on_chain_name
 
     @property
     def tx_hash(self) -> EthHashBytes:
         return self.__tx_hash
 
     def tuple(self) -> ReceiptParamTuple:
-        return self.__on_chain, self.__tx_hash
+        return self.__on_chain_name, self.__tx_hash
 
 
 class CallParams:
     def __init__(self, target_chain_name: str, contract_name: str, method_name: str, params: Union[tuple, list]):
-        self.__on_chain = target_chain_name
+        self.__on_chain_name = target_chain_name
         self.__contract_name = contract_name
         self.__method_name = method_name
         self.__params = params
 
     def tuple(self):
-        return self.__on_chain, self.__contract_name, self.__method_name, self.__params
+        return self.__on_chain_name, self.__contract_name, self.__method_name, self.__params
 
 
 class TaskStatus(Enum):
@@ -114,8 +114,6 @@ class ChainEventABC(metaclass=ABCMeta):
         return self.__task_status
 
     def switch_to_check_receipt(self, target_chain_name: str, tx_hash: EthHashBytes, time_lock: int):
-        if not isinstance(target_chain_name, str):
-            raise Exception("receipt target chain: type error")
         if not isinstance(tx_hash, EthHashBytes):
             raise Exception("receipt tx_hash: type error")
         self.time_lock = time_lock

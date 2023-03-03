@@ -63,13 +63,11 @@ class PeriodicEventABC(metaclass=ABCMeta):
     def task_status(self) -> TaskStatus:
         return self.__task_status
 
-    def switch_to_check_receipt(self, target_chain: Chain, tx_hash: EthHashBytes, time_lock: int):
-        if not isinstance(target_chain, Chain):
-            raise Exception("receipt target chain: type error")
+    def switch_to_check_receipt(self, target_chain_name: str, tx_hash: EthHashBytes, time_lock: int):
         if not isinstance(tx_hash, EthHashBytes):
             raise Exception("receipt tx_hash: type error")
         self.time_lock = time_lock
-        self.__receipt_params = ReceiptParams(target_chain, tx_hash)
+        self.__receipt_params = ReceiptParams(target_chain_name, tx_hash)
         self.__task_status = TaskStatus.CheckReceipt
 
     def get_receipt_params(self) -> Optional[ReceiptParams]:

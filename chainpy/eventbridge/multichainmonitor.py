@@ -149,7 +149,7 @@ class MultiChainMonitor(MultiChainManager):
                     global_logger.formatted_log(
                         "Monitor",
                         address=self.active_account.address,
-                        related_chain=chain_event.on_chain,
+                        related_chain=chain_event.on_chain_name,
                         msg="{}:Detected".format(chain_event.summary())
                     )
             time.sleep(self.multichain_config["chain_monitor_period_sec"])
