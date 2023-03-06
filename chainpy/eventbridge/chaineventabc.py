@@ -106,7 +106,7 @@ class ChainEventABC(metaclass=ABCMeta):
         return self.__decoded_data
 
     @property
-    def on_chain(self) -> str:
+    def on_chain_name(self) -> str:
         return self.__detected_event.chain_name
 
     @property
