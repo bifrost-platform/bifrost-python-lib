@@ -114,14 +114,14 @@ class MultiChainMonitor(MultiChainManager):
     def bootstrap_chain_events(self):
         # collect events of every type on every chain
         detected_events = list()
-        for chain_index in self.supported_chain_list:
-            chain_manager = self.get_chain_manager_of(chain_index)
+        for chain_name in self.supported_chain_list:
+            chain_manager = self.get_chain_manager_of(chain_name)
             start_height = chain_manager.latest_height
             detected_events += chain_manager.collect_unchecked_single_chain_events(matured_only=True)
             global_logger.formatted_log(
                 "BootStrap",
                 address=chain_manager.account.address,
-                related_chain=chain_index,
+                related_chain_name=chain_name,
                 msg="CollectEvents:from({}):to({})".format(start_height, chain_manager.latest_height)
             )
 
@@ -149,7 +149,7 @@ class MultiChainMonitor(MultiChainManager):
                     global_logger.formatted_log(
                         "Monitor",
                         address=self.active_account.address,
-                        related_chain=chain_event.on_chain_name,
+                        related_chain_name=chain_event.on_chain_name,
                         msg="{}:Detected".format(chain_event.summary())
                     )
             time.sleep(self.multichain_config["chain_monitor_period_sec"])
