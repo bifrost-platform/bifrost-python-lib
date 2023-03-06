@@ -20,7 +20,6 @@ from chainpy.eth.ethtype.utils import is_hex
 @dataclass
 class EthBlock:
     verbose: bool = field(init=False, metadata=config(exclude=Exclude.ALWAYS))
-    type: int = field(init=False, metadata=config(exclude=Exclude.ALWAYS))
 
     difficulty: int = field(metadata=IntegerMeta)
     extra_data: EthHexBytes = field(metadata=EthHexBytesMeta)
@@ -51,7 +50,6 @@ class EthBlock:
 
     def __post_init__(self):
         self.verbose = check_transaction_verbosity(self.transactions)
-        self.type = 0 if self.base_fee_per_gas is None else 2
 
     def serialize(self) -> EthHexBytes:
         # TODO impl.
