@@ -128,14 +128,14 @@ class Logger:
             self,
             log_id: str,
             address: EthAddress = None,
-            related_chain: str = DEFAULT_CHAIN_NAME,
+            related_chain_name: str = DEFAULT_CHAIN_NAME,
             msg: str = None
     ):
         if log_id is None:
             return
         msg = "{}:{}:{}".format(
             address.hex()[:10] if address is not None else "NoAddress",
-            related_chain,
+            related_chain_name,
             msg
         )
         self.info(log_id, msg)

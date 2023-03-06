@@ -54,8 +54,8 @@ class MultiChainManager:
         return cls.from_configs(config, private_config)
 
     def set_account(self, private_key: str):
-        for chain_index in self.supported_chain_list:
-            chain_manager = self.get_chain_manager_of(chain_index)
+        for chain_name in self.supported_chain_list:
+            chain_manager = self.get_chain_manager_of(chain_name)
             chain_manager.set_account(private_key)
         self.__active_account = EthAccount.from_secret(private_key)
 
@@ -126,8 +126,8 @@ class MultiChainManager:
 
     def collect_unchecked_multichain_events(self) -> List[DetectedEvent]:
         unchecked_events = list()
-        for chain_index in self.__supported_chains:
-            chain_manager = self.get_chain_manager_of(chain_index)
+        for chain_name in self.__supported_chains:
+            chain_manager = self.get_chain_manager_of(chain_name)
             unchecked_events += chain_manager.collect_unchecked_single_chain_events()
         return unchecked_events
 

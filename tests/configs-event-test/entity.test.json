@@ -50,7 +50,7 @@
     },
     "TestChain": {
         "chain_name": "TestChain",
-        "block_period_sec": 3,
+        "block_period_sec": 13,
         "url_with_access_key": "http://127.0.0.1:5001",
         "rpc_server_downtime_allow_sec": 3
     },

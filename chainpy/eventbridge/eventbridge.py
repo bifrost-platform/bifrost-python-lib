@@ -88,10 +88,10 @@ class EventBridge(MultiChainMonitor):
 
     def _handle_call_event(self, event: ChainEventABC):
         # build call transaction using the event
-        chain_index, contract_name, method_name, params_tuple = event.build_call_transaction_params()
+        chain_name, contract_name, method_name, params_tuple = event.build_call_transaction_params()
 
         # get result by call transaction
-        result = self.world_call(chain_index, contract_name, method_name, params_tuple)
+        result = self.world_call(chain_name, contract_name, method_name, params_tuple)
 
         # update event
         updated_event = event.handle_call_result(result)
@@ -116,7 +116,7 @@ class EventBridge(MultiChainMonitor):
             global_logger.formatted_log(
                 "Consumer",
                 address=self.active_account.address,
-                related_chain=dst_chain_name,
+                related_chain_name=dst_chain_name,
                 msg="{}:txHash({}):nonce({})".format(event.summary(), tx_hash.hex(), tx.nonce)
             )
 
@@ -125,7 +125,7 @@ class EventBridge(MultiChainMonitor):
                 global_logger.formatted_log(
                     "Consumer",
                     address=self.active_account.address,
-                    related_chain=dst_chain_name,
+                    related_chain_name=dst_chain_name,
                     msg="{}:ZeroTxHash".format(event.summary())
                 )
                 event.time_lock = timestamp_msec() + 3000
@@ -142,7 +142,7 @@ class EventBridge(MultiChainMonitor):
             global_logger.formatted_log(
                 "Evm",
                 address=self.active_account.address,
-                related_chain=dst_chain_name,
+                related_chain_name=dst_chain_name,
                 msg="{}:EvmError:{}".format(event.summary(), str(e))
             )
             # TODO does not update event when reverted poll filtered error occurs
@@ -168,7 +168,7 @@ class EventBridge(MultiChainMonitor):
         global_logger.formatted_log(
             "Receipt",
             address=self.active_account.address,
-            related_chain=receipt_params.on_chain_name,
+            related_chain_name=receipt_params.on_chain_name,
             msg="{}:receipt({}):{}".format(event.summary(), receipt_params.tx_hash.hex(), log_status)
         )
 
@@ -177,7 +177,7 @@ class EventBridge(MultiChainMonitor):
             global_logger.formatted_log(
                 "Receipt",
                 address=self.active_account.address,
-                related_chain=receipt_params.on_chain_name,
+                related_chain_name=receipt_params.on_chain_name,
                 msg="{}:RestartAfter{}Second".format(event.summary(), 60)
             )
             sleep(60)

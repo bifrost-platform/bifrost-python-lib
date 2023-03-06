@@ -50,7 +50,7 @@ class SimpleBtcClient:
         except json.decoder.JSONDecodeError as e:
             global_logger.formatted_log(
                 "RPCException",
-                related_chain=Chain.BFC_MAIN,
+                related_chain_name=Chain.BFC_MAIN,
                 msg="re-run after sleeping 60 secs"
             )
             sleep(60)

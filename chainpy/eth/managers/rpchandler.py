@@ -39,7 +39,7 @@ class EthRpcClient:
             rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
             transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY
     ):
-        self.__chain: str = chain_name
+        self.__chain_name: str = chain_name
         self.__url_with_access_key = url_with_access_key
         self.__receipt_max_try = DEFAULT_RECEIPT_MAX_RETRY if receipt_max_try is None else receipt_max_try
         self.__block_period_sec = DEFAULT_BLOCK_PERIOD_SECS if block_period_sec is None else block_period_sec
@@ -108,7 +108,7 @@ class EthRpcClient:
     @property
     def chain_name(self) -> str:
         """ return chain index specified from the configuration. """
-        return self.__chain
+        return self.__chain_name
 
     @property
     def chain_id(self) -> int:
@@ -149,16 +149,16 @@ class EthRpcClient:
             except RpcOutOfStatusCode or JSONDecodeError as e:
                 # export log for out-of-status error
                 PrometheusExporter.exporting_rpc_failed(self.chain_name)
-                global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=str(e))
+                global_logger.formatted_log("RPCException", related_chain_name=self.__chain_name, msg=str(e))
 
                 # sleep
                 sleep_notify_msg = "re-tried after {} secs".format(self.__rpc_server_downtime_allow_sec)
-                global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=sleep_notify_msg)
+                global_logger.formatted_log("RPCException", related_chain_name=self.__chain_name, msg=sleep_notify_msg)
                 time.sleep(self.__rpc_server_downtime_allow_sec)
 
                 # re-send the request
                 resend_notify_msg = "re-send rpc request: method({}), params({})".format(method, params)
-                global_logger.formatted_log("RPCException", related_chain=self.__chain, msg=resend_notify_msg)
+                global_logger.formatted_log("RPCException", related_chain_name=self.__chain_name, msg=resend_notify_msg)
 
                 if not resend_on_fail:
                     raise e
