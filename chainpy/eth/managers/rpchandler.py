@@ -62,7 +62,7 @@ class EthRpcClient:
     def from_config_dict(cls, config: dict, private_config: dict = None):
         chain_config = merge_dict(config, private_config)
         chain_name = chain_config.get("chain_name")
-        if chain_name is None:
+        if chain_name is None or chain_name == "":
             raise Exception("Chain name is required")
 
         return cls(
