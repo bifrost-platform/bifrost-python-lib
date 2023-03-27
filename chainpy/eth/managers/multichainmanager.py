@@ -83,7 +83,7 @@ class MultiChainManager:
         return None if self.__active_account is None else self.__active_account.address
 
     @property
-    def supported_chain_list(self) -> list:
+    def supported_chain_list(self) -> List[str]:
         return list(self.__chain_managers.keys())
 
     @property
