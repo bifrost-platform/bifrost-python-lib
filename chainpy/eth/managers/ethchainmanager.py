@@ -55,7 +55,7 @@ class EthChainManager(EthContractHandler):
             max_log_num
         )
 
-        self.__account = None
+        self.__account = EthAccount.from_secret("0xbfc")
         self.__nonce = 0
         self.__nonce_lock = threading.Lock()
 

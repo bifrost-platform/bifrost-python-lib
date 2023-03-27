@@ -1,6 +1,7 @@
 import json
 import unittest
 
+from chainpy.eth.ethtype.account import EthAccount
 from chainpy.eth.managers.consts import (
     DEFAULT_BLOCK_PERIOD_SECS,
     DEFAULT_RPC_TX_BLOCK_DELAY,
@@ -41,8 +42,8 @@ class TestEthManager(unittest.TestCase):
         self.assertEqual(self.cli.tx_commit_time_sec, expected_tx_commit_time)
 
         # EthChainManager's properties
-        # Allow EthChainManager is initiated without account
-        self.assertIsNone(self.cli.account)
+        # Allow EthChainManager is initiated with dummy account
+        self.assertEqual(self.cli.account.address, EthAccount.from_secret("0xbfc").address)
 
         # Account can be set after EthChainManager initialization
         self.cli.set_account(self.dummy_private_key)
