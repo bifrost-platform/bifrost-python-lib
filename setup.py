@@ -12,7 +12,7 @@ setup(
         "requests==2.28.1",
         "dataclasses-json==0.5.7",
         "prometheus-client==0.15.0",
-        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@0.2.1",
+        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@0.2.2",
         "python-dotenv==0.16.0",
         "jsonpath-ng",
         "jsonrpcserver",
