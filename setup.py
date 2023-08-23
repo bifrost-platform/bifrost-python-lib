@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+
 from chainpy.__init__ import __version__
 
 setup(
@@ -12,7 +13,7 @@ setup(
         "requests==2.28.1",
         "dataclasses-json==0.5.7",
         "prometheus-client==0.15.0",
-        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@0.2.9",
+        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@0.2.11",
         "python-dotenv==0.16.0",
         "jsonpath-ng",
         "jsonrpcserver",
