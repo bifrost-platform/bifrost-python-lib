@@ -8,14 +8,14 @@ from dotenv import load_dotenv
 from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS
 from chainpy.offchain.consts.coingeckoconst import COINGECKO_SYMBOL_TO_QUERY_ID
 from chainpy.offchain.consts.upbitconst import UPBIT_SYMBOL_TO_ANCHORS
-from .consts.gateioconst import GATE_IO_SYMBOL_TO_ANCHORS
-from .consts.binanceconst import BINANCE_SYMBOL_TO_ANCHORS
 from .binanceapi import BinanceApi
 from .chainlinkapi import ChainlinkApi
 from .coingeckoapi import CoingeckoApi
-from .upbitapi import UpbitApi
+from .consts.binanceconst import BINANCE_SYMBOL_TO_ANCHORS
+from .consts.gateioconst import GATE_IO_SYMBOL_TO_ANCHORS
 from .gateioapi import GateIoApi
 from .priceapiabc import PriceApiABC, Symbol, Symbol2Price, PricesVolumes
+from .upbitapi import UpbitApi
 from .utils import to_upper_list, restore_replace
 from ..eth.ethtype.amount import EthAmount
 from ..logger import global_logger

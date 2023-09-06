@@ -1,13 +1,12 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Union
 
+import rlp
 from dataclasses_json import LetterCase, dataclass_json, config
 from eth_account import Account
 from eth_account._utils.transaction_utils import transaction_rpc_to_rlp_structure
 from eth_account._utils.typed_transactions import access_list_sede_type
 from eth_rlp import HashableRLP
-
-import rlp
 from rlp.sedes import (
     big_endian_int, binary, Binary
 )

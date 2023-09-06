@@ -1,8 +1,8 @@
 import unittest
 from typing import Literal, List, Union
 
-from .utils import float_to_wei, is_dec, is_hex, to_hex_str_with_0x
 from .exceptions import *
+from .utils import float_to_wei, is_dec, is_hex, to_hex_str_with_0x
 
 
 class EthAmount:

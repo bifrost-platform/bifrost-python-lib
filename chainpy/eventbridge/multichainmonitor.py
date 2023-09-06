@@ -1,12 +1,12 @@
+import time
 from queue import PriorityQueue
 from typing import Union, List, Tuple
-import time
 
+from chainpy.eth.managers.eventobj import DetectedEvent
+from chainpy.eth.managers.multichainmanager import MultiChainManager
 from chainpy.eventbridge.chaineventabc import ChainEventABC
 from chainpy.eventbridge.periodiceventabc import PeriodicEventABC
 from chainpy.eventbridge.utils import timestamp_msec
-from chainpy.eth.managers.multichainmanager import MultiChainManager
-from chainpy.eth.managers.eventobj import DetectedEvent
 from chainpy.logger import global_logger
 
 
@@ -101,7 +101,7 @@ class MultiChainMonitor(MultiChainManager):
 
     @staticmethod
     def extract_specific_events(
-            event_name: str, detected_events: List[DetectedEvent]
+        event_name: str, detected_events: List[DetectedEvent]
     ) -> Tuple[List[DetectedEvent], List[DetectedEvent]]:
         targets, remainders = list(), list()
         for detected_event in detected_events:

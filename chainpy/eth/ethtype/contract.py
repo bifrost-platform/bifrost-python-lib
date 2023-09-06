@@ -1,14 +1,13 @@
-from typing import Union
 import json
+from dataclasses import dataclass
+from typing import Union, Optional, List, Dict
 
 import eth_abi
 from dataclasses_json import dataclass_json, LetterCase
-from dataclasses import dataclass
-from typing import Optional, List, Dict
 
+from .exceptions import *
 from .hexbytes import EthAddress, EthHexBytes, EthHashBytes
 from .utils import keccak_hash
-from .exceptions import *
 from ...logger import global_logger
 
 

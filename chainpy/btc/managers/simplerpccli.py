@@ -1,10 +1,10 @@
 import json
 from time import sleep
+from typing import Union
 
 import requests
 from bridgeconst.consts import Chain
 from requests.auth import HTTPBasicAuth
-from typing import Union
 
 from chainpy.logger import global_logger
 

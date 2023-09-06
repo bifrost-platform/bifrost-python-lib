@@ -1,8 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from typing import Optional, TYPE_CHECKING
 
-from bridgeconst.consts import Chain
-
 from .chaineventabc import (
     TaskStatus,
     ReceiptParams,

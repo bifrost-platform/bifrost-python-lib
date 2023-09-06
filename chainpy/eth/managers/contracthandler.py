@@ -1,15 +1,13 @@
 from typing import List, Optional, Dict, Any, Union
 
-from .utils import merge_dict
-
-from ..ethtype.receipt import EthLog
-from ..ethtype.contract import EthContract
-from ..ethtype.exceptions import RpcExceedRequestTime
-from ..ethtype.hexbytes import EthAddress, EthHashBytes
-
 from .eventobj import DetectedEvent
 from .rpchandler import EthRpcClient, DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, \
     DEFAULT_BLOCK_AGING_BLOCKS, DEFAULT_RPC_RESEND_DELAY_SEC, DEFAULT_RPC_TX_BLOCK_DELAY
+from .utils import merge_dict
+from ..ethtype.contract import EthContract
+from ..ethtype.exceptions import RpcExceedRequestTime
+from ..ethtype.hexbytes import EthAddress, EthHashBytes
+from ..ethtype.receipt import EthLog
 
 DEFAULT_LATEST_HEIGHT = 0
 DEFAULT_MAX_LOG_NUM = 1000
@@ -45,20 +43,21 @@ class EthContractHandler(EthRpcClient):
 
         Information on the remaining parameters is found in the EthRpcClient.
     """
+
     def __init__(
-            self,
-            url_with_access_key: str,
-            contracts: List[Dict[str, str | int]],
-            chain_name: str,
-            abi_dir: str = None,
-            receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
-            block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
-            block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
-            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
-            transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY,
-            events: List[dict] = None,
-            latest_height: int = DEFAULT_LATEST_HEIGHT,
-            max_log_num: int = DEFAULT_MAX_LOG_NUM
+        self,
+        url_with_access_key: str,
+        contracts: List[Dict[str, str | int]],
+        chain_name: str,
+        abi_dir: str = None,
+        receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
+        block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
+        block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
+        rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
+        transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY,
+        events: List[dict] = None,
+        latest_height: int = DEFAULT_LATEST_HEIGHT,
+        max_log_num: int = DEFAULT_MAX_LOG_NUM
     ):
         super().__init__(
             url_with_access_key,
@@ -198,9 +197,12 @@ class EthContractHandler(EthRpcClient):
         return sorted(list(set(addresses)))
 
     def _get_logs(
-            self, from_block: int, to_block: int,
-            emitter_addresses: List[EthAddress],
-            topics: List[Union[EthHashBytes, List[EthHashBytes]]]) -> List[EthLog]:
+        self,
+        from_block: int,
+        to_block: int,
+        emitter_addresses: List[EthAddress],
+        topics: List[Union[EthHashBytes, List[EthHashBytes]]]
+    ) -> List[EthLog]:
         """
         Wrapper method of eth_get_logs.
         If the eth_get_logs exceeds request time, call twice with half range.
@@ -216,7 +218,8 @@ class EthContractHandler(EthRpcClient):
             return raw_logs
 
     def _check_fetched_event(
-            self, logs: List[EthLog], emitter_addresses: List[EthAddress]) -> List[DetectedEvent]:
+        self, logs: List[EthLog], emitter_addresses: List[EthAddress]
+    ) -> List[DetectedEvent]:
         """ Verify that the fetched event is emitted by a legitimate contract."""
         historical_logs = list()
         for log in logs:
@@ -257,7 +260,8 @@ class EthContractHandler(EthRpcClient):
         return self._check_fetched_event(logs, emitter_addresses)
 
     def collect_every_event(
-            self, from_block: int, to_block: int) -> List[DetectedEvent]:
+        self, from_block: int, to_block: int
+    ) -> List[DetectedEvent]:
         """
         Collect every event specified in config.
         If the entered range [from_block, to_block] is greater than max_log_num,

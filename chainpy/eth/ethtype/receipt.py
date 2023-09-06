@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
+from typing import Optional, List
 
 from dataclasses_json import dataclass_json, LetterCase, config
-from typing import Optional, List
 
 from .dataclassmeta import IntegerMeta, EthHexBytesMeta, EthHashBytesMeta, EthAddrMeta, EthHashBytesListMeta
 from .hexbytes import EthHashBytes, EthAddress, EthHexBytes

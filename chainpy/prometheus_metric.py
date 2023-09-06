@@ -1,4 +1,5 @@
 from typing import Dict
+
 from prometheus_client import Gauge, start_http_server
 
 MONITOR_ALIVE_QUERY_NAME = "relayer_monitor_alive"

@@ -69,7 +69,7 @@ class BinanceApi(PriceApiABC):
 
     @staticmethod
     def _parse_price_and_volume_from_queried_data(
-            query_id: QueryId, queried_data: List[QueriedData]
+        query_id: QueryId, queried_data: List[QueriedData]
     ) -> Tuple[Price, Volume]:
         for data in queried_data:
             if data["symbol"] == query_id:

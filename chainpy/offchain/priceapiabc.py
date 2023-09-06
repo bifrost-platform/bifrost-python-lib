@@ -1,6 +1,7 @@
+import json
 from abc import ABCMeta, abstractmethod
 from typing import List, Union, Dict, Tuple
-import json
+
 import requests
 
 from .utils import to_upper_list, replace_symbols, restore_replace
@@ -132,7 +133,7 @@ class PriceApiABC(metaclass=ABCMeta):
         return ret
 
     def get_current_prices_with_volumes(
-            self, symbols: Union[Symbol, List[Symbol]]
+        self, symbols: Union[Symbol, List[Symbol]]
     ) -> Dict[Symbol, PriceVolume]:
         symbols = to_upper_list(symbols)
         supported_subset = self.check_supported(symbols)
@@ -146,7 +147,7 @@ class PriceApiABC(metaclass=ABCMeta):
         return restore_replace(pvs, self.__class__.SYMBOL_REPLACE_MAP)
 
     def get_current_prices(
-            self, symbols: Union[List[Symbol], Symbol]
+        self, symbols: Union[List[Symbol], Symbol]
     ) -> Dict[Symbol, Price]:
         results = self.get_current_prices_with_volumes(symbols)
         ret = dict()

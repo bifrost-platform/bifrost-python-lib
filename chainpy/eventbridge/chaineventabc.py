@@ -2,8 +2,8 @@ from abc import *
 from enum import Enum
 from typing import Tuple, Optional, List, Dict, Union, TYPE_CHECKING
 
-from ..eth.managers.contracthandler import DetectedEvent
 from ..eth.ethtype.hexbytes import EthHashBytes
+from ..eth.managers.contracthandler import DetectedEvent
 
 if TYPE_CHECKING:
     from .eventbridge import EventBridge
@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 ReceiptParamTuple = Tuple[str, EthHashBytes]
 SendParamTuple = Tuple[str, str, str, Union[tuple, list]]
 CallParamTuple = Tuple[str, str, str, Union[tuple, list]]
-
 
 BASIC_GAS_LIMIT_MULTIPLIER = 1.2
 
@@ -51,10 +50,9 @@ class TaskStatus(Enum):
 
 
 class ChainEventABC(metaclass=ABCMeta):
-    def __init__(self,
-                 detected_event: DetectedEvent,
-                 time_lock: int,
-                 manager: "EventBridge"):
+    def __init__(
+        self, detected_event: DetectedEvent, time_lock: int, manager: "EventBridge"
+    ):
         self.__detected_event = detected_event
         self.__time_lock = time_lock
         self.__manager = manager

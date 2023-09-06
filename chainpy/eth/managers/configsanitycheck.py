@@ -1,7 +1,8 @@
 import copy
 from typing import Any
-from jsonpath_ng import parse, Fields
+
 from bridgeconst.consts import Chain, Asset
+from jsonpath_ng import parse, Fields
 
 
 class KeyRequired(Exception):
@@ -69,12 +70,12 @@ class ConfigSanityChecker:
         self.supporting_chain_names = copy.deepcopy(matches[0].value)
 
     def check_valid_type(
-            self,
-            json_expr: Fields,
-            expected_value_type: type,
-            is_enum: bool = False,
-            key_required: bool = False,
-            value_default_allow: bool = True
+        self,
+        json_expr: Fields,
+        expected_value_type: type,
+        is_enum: bool = False,
+        key_required: bool = False,
+        value_default_allow: bool = True
     ):
         matched_values = [match.value for match in json_expr.find(self.config)]
         if key_required and not matched_values:

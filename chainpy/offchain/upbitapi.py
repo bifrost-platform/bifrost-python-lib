@@ -1,8 +1,8 @@
 import unittest
 from typing import List, Tuple
 
-from .priceapiabc import PriceApiABC, QueriedData, Symbol, QueryId, Price, Volume, AnchorSymbol
 from chainpy.offchain.consts.upbitconst import UPBIT_SYMBOL_TO_ANCHORS
+from .priceapiabc import PriceApiABC, QueriedData, Symbol, QueryId, Price, Volume, AnchorSymbol
 from .utils import restore_replace
 from ..eth.ethtype.amount import EthAmount, eth_amount_weighted_sum, eth_amount_sum
 
@@ -24,8 +24,8 @@ class UpbitApi(PriceApiABC):
     def ping(self) -> bool:
         result = self.get_current_prices_with_volumes("BTC")
         return "BTC" in result.keys() \
-               and isinstance(result["BTC"].price(), EthAmount) \
-               and isinstance(result["BTC"].volume(), EthAmount)
+            and isinstance(result["BTC"].price(), EthAmount) \
+            and isinstance(result["BTC"].volume(), EthAmount)
 
     @staticmethod
     def is_anchor(symbol: Symbol) -> bool:
@@ -68,7 +68,7 @@ class UpbitApi(PriceApiABC):
 
     @staticmethod
     def _parse_price_and_volume_from_queried_data(
-            query_id: QueryId, queried_data: List[QueriedData]
+        query_id: QueryId, queried_data: List[QueriedData]
     ) -> Tuple[Price, Volume]:
         for data in queried_data:
             if data["market"] == query_id:

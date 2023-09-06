@@ -8,13 +8,12 @@ from .rpchandler import (
     DEFAULT_RPC_RESEND_DELAY_SEC,
     DEFAULT_RPC_TX_BLOCK_DELAY
 )
-
-from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
-from ..ethtype.amount import EthAmount
 from ..ethtype.account import EthAccount
+from ..ethtype.amount import EthAmount
+from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.transaction import EthTransaction
-from ..managers.utils import FeeConfig, merge_dict
 from ..managers.contracthandler import EthContractHandler
+from ..managers.utils import FeeConfig, merge_dict
 
 PRIORITY_FEE_MULTIPLIER = 4
 TYPE0_GAS_MULTIPLIER = 1.5
@@ -23,22 +22,22 @@ TYPE2_GAS_MULTIPLIER = 2
 
 class EthChainManager(EthContractHandler):
     def __init__(
-            self,
-            url_with_access_key: str,
-            contracts: List[dict],
-            chain_name: str,
-            abi_dir: str = None,
-            receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
-            block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
-            block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
-            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
-            transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY,
+        self,
+        url_with_access_key: str,
+        contracts: List[dict],
+        chain_name: str,
+        abi_dir: str = None,
+        receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
+        block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
+        block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
+        rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
+        transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY,
 
-            events: List[dict] = None,
-            latest_height: int = 0,
-            max_log_num: int = 1000,
+        events: List[dict] = None,
+        latest_height: int = 0,
+        max_log_num: int = 1000,
 
-            fee_config: dict = None
+        fee_config: dict = None
     ):
         super().__init__(
             url_with_access_key,
@@ -130,10 +129,11 @@ class EthChainManager(EthContractHandler):
         return self.__fee_config.type
 
     def _encode_transaction_data(
-            self,
-            contract_name: str,
-            method_name: str,
-            method_params: list) -> EthHexBytes:
+        self,
+        contract_name: str,
+        method_name: str,
+        method_params: list
+    ) -> EthHexBytes:
         contract = self.get_contract_by_name(contract_name)
         data = contract.abi.get_method(method_name).encode_input_data(method_params)
         return data
@@ -150,12 +150,12 @@ class EthChainManager(EthContractHandler):
         return self.eth_estimate_gas(tx_dict)
 
     def call_transaction(
-            self,
-            contract_name: str,
-            method_name: str,
-            method_params: list,
-            sender_addr: EthAddress = None,
-            value: EthAmount = None) -> Union[EthHexBytes, tuple]:
+        self,
+        contract_name: str,
+        method_name: str,
+        method_params: list,
+        sender_addr: EthAddress = None,
+        value: EthAmount = None) -> Union[EthHexBytes, tuple]:
         data = self._encode_transaction_data(contract_name, method_name, method_params)
         contract_address = self.get_contract_by_name(contract_name).address
 
@@ -169,11 +169,12 @@ class EthChainManager(EthContractHandler):
         return contract.abi.get_method(method_name).decode_output_data(result)
 
     def build_transaction(
-            self,
-            contract_name: str,
-            method_name: str,
-            method_params: list,
-            value: EthAmount = None) -> EthTransaction:
+        self,
+        contract_name: str,
+        method_name: str,
+        method_params: list,
+        value: EthAmount = None
+    ) -> EthTransaction:
         data = self._encode_transaction_data(contract_name, method_name, method_params)
         contract_address = self.get_contract_by_name(contract_name).address
         value = EthAmount.zero() if value is None else value
@@ -197,12 +198,12 @@ class EthChainManager(EthContractHandler):
         return gas_price, base_fee_price, priority_fee_price
 
     def set_gas_limit_and_fee(
-            self,
-            tx: EthTransaction,
-            gas_limit: int = None,
-            gas_limit_multiplier: float = 1.0,
-            boost: bool = False,
-            sender_account: EthAccount = None,
+        self,
+        tx: EthTransaction,
+        gas_limit: int = None,
+        gas_limit_multiplier: float = 1.0,
+        boost: bool = False,
+        sender_account: EthAccount = None,
     ) -> (bool, EthTransaction):
 
         if gas_limit is None:
@@ -232,11 +233,13 @@ class EthChainManager(EthContractHandler):
 
         return is_sendable, tx
 
-    def send_transaction(self,
-                         transaction: EthTransaction,
-                         gas_limit: int = None,
-                         boost: bool = False,
-                         gas_limit_multiplier: float = 1.0) -> EthHashBytes:
+    def send_transaction(
+        self,
+        transaction: EthTransaction,
+        gas_limit: int = None,
+        boost: bool = False,
+        gas_limit_multiplier: float = 1.0
+    ) -> EthHashBytes:
         if self.__account is None:
             raise Exception("No account")
 
@@ -263,10 +266,12 @@ class EthChainManager(EthContractHandler):
 
         return tx_hash
 
-    def transfer_native_coin(self,
-                             receiver: EthAddress,
-                             value: EthAmount,
-                             boost: bool = False) -> EthHashBytes:
+    def transfer_native_coin(
+        self,
+        receiver: EthAddress,
+        value: EthAmount,
+        boost: bool = False
+    ) -> EthHashBytes:
         if self.__account is None:
             raise Exception("No Account")
         raw_tx = EthTransaction.init(self.chain_id, receiver, value, EthHexBytes.default())

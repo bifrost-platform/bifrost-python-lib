@@ -59,10 +59,10 @@ class EthFeeCapError(Exception):
 
 
 def raise_integrated_exception(
-        chain_name: str,
-        e: Exception = None,
-        error_json: Optional[Union[str, dict]] = None,
-        is_none_result: bool = False
+    chain_name: str,
+    e: Exception = None,
+    error_json: Optional[Union[str, dict]] = None,
+    is_none_result: bool = False
 ):
     if is_none_result:
         raise RpcNoneResult(chain_name, "None rpc-result")

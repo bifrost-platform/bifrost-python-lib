@@ -1,17 +1,18 @@
 import json
-import requests
 import time
-from typing import List, Optional, Union
 from json import JSONDecodeError
+from typing import List, Optional, Union
+
+import requests
 from requests import Response
 
 from .consts import *
 from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpCMaxRetry
 from .utils import merge_dict, hex_height_or_latest
 from ..ethtype.amount import EthAmount
-from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 from ..ethtype.block import EthBlock
 from ..ethtype.exceptions import *
+from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
 from ..ethtype.receipt import EthReceipt, EthLog
 from ..ethtype.transaction import EthTransaction
 from ...logger import global_logger
@@ -30,14 +31,14 @@ class EthRpcClient:
     """
 
     def __init__(
-            self,
-            url_with_access_key: str,
-            chain_name: str = DEFAULT_CHAIN_NAME,
-            receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
-            block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
-            block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
-            rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
-            transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY
+        self,
+        url_with_access_key: str,
+        chain_name: str = DEFAULT_CHAIN_NAME,
+        receipt_max_try: int = DEFAULT_RECEIPT_MAX_RETRY,
+        block_period_sec: int = DEFAULT_BLOCK_PERIOD_SECS,
+        block_aging_period: int = DEFAULT_BLOCK_AGING_BLOCKS,
+        rpc_server_downtime_allow_sec: int = DEFAULT_RPC_RESEND_DELAY_SEC,
+        transaction_block_delay: int = DEFAULT_RPC_TX_BLOCK_DELAY
     ):
         self.__chain_name: str = chain_name
         self.__url_with_access_key = url_with_access_key
@@ -138,7 +139,7 @@ class EthRpcClient:
         return response
 
     def send_request(
-            self, method: str, params: list, cnt: int = 0, resend_on_fail: bool = False
+        self, method: str, params: list, cnt: int = 0, resend_on_fail: bool = False
     ) -> Optional[Union[dict, str]]:
         while True:
             try:
@@ -217,14 +218,14 @@ class EthRpcClient:
         return self._get_block("eth_getBlockByNumber", [hex(latest_height), verbose])
 
     def eth_get_block_by_hash(
-            self, block_hash: EthHashBytes, verbose: bool = False, matured_only: bool = False
+        self, block_hash: EthHashBytes, verbose: bool = False, matured_only: bool = False
     ) -> Optional[EthBlock]:
         if not isinstance(block_hash, EthHashBytes):
             raise EthTypeError(EthHashBytes, type(block_hash))
         return self._get_block("eth_getBlockByHash", [block_hash.hex(), verbose], matured_only)
 
     def eth_get_block_by_height(
-            self, height: Union[int, str] = "latest", verbose: bool = False, matured_only: bool = False
+        self, height: Union[int, str] = "latest", verbose: bool = False, matured_only: bool = False
     ) -> Optional[EthBlock]:
         height_hex_or_latest = hex_height_or_latest(height)
         return self._get_block("eth_getBlockByNumber", [height_hex_or_latest, verbose], matured_only)
@@ -252,7 +253,7 @@ class EthRpcClient:
         return self._get_transaction("eth_getTransactionByBlockNumberAndIndex", [hex(height), hex(tx_index)], matured_only)
 
     def eth_get_transaction_by_hash_and_index(
-            self, block_hash: EthHashBytes, tx_index: int, matured_only: bool = False
+        self, block_hash: EthHashBytes, tx_index: int, matured_only: bool = False
     ) -> Optional[EthTransaction]:
         if not isinstance(block_hash, EthHashBytes):
             raise EthTypeError(EthHashBytes, type(block_hash))
@@ -281,10 +282,12 @@ class EthRpcClient:
             time.sleep(self.__block_period_sec / 2)  # wait half block
         return None
 
-    def eth_get_logs(self,
-                     from_block: int, to_block: int,
-                     addresses: List[EthAddress],
-                     topics: List[Union[EthHashBytes, List[EthHashBytes]]]) -> List[EthLog]:
+    def eth_get_logs(
+        self,
+        from_block: int, to_block: int,
+        addresses: List[EthAddress],
+        topics: List[Union[EthHashBytes, List[EthHashBytes]]]
+    ) -> List[EthLog]:
         """ find logs of the event (which have topics) from multiple contracts """
         if from_block > to_block:
             raise Exception("from_block should be less than to_block")
@@ -349,7 +352,7 @@ class EthRpcClient:
         return int(resp, 16)
 
     def eth_get_balance(
-            self, address: EthAddress, height: Union[int, str] = "latest", matured_only: bool = False
+        self, address: EthAddress, height: Union[int, str] = "latest", matured_only: bool = False
     ) -> EthAmount:
         """ queries matured balance of the user. """
         if not isinstance(address, EthAddress):

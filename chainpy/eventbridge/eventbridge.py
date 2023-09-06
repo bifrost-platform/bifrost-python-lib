@@ -4,19 +4,15 @@ import threading
 from time import sleep
 from typing import Optional, Union, Any, Type
 
-from bridgeconst.consts import Chain
-
-from .multichainmonitor import MultiChainMonitor
-from .utils import timestamp_msec
-from .periodiceventabc import PeriodicEventABC
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
-
+from .multichainmonitor import MultiChainMonitor
+from .periodiceventabc import PeriodicEventABC
+from .utils import timestamp_msec
 from ..eth.ethtype.hexbytes import EthHashBytes
 from ..eth.managers.consts import DEFAULT_CHAIN_NAME
 from ..eth.managers.exceptions import RpcEVMError
 from ..logger import global_logger
 from ..prometheus_metric import PrometheusExporter
-
 
 SendEventABC = Union[ChainEventABC, PeriodicEventABC]
 

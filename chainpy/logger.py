@@ -1,9 +1,9 @@
-import os
-from pathlib import Path
-import shutil
-from datetime import datetime
 import logging.handlers
+import os
+import shutil
 import unittest
+from datetime import datetime
+from pathlib import Path
 
 from chainpy.eth.ethtype.hexbytes import EthAddress
 from chainpy.eth.managers.consts import *
@@ -11,13 +11,13 @@ from chainpy.eth.managers.consts import *
 
 class LoggerConfig:
     def __init__(
-            self,
-            level: int = logging.DEBUG,
-            log_format: str = "%(message)s",
-            log_file_name: str = None,
-            backup_count: int = 0,
-            when: int = "H",
-            interval: int = 1,
+        self,
+        level: int = logging.DEBUG,
+        log_format: str = "%(message)s",
+        log_file_name: str = None,
+        backup_count: int = 0,
+        when: int = "H",
+        interval: int = 1,
     ):
         self.level = level
         self.log_format = log_format
@@ -27,13 +27,13 @@ class LoggerConfig:
         self.interval = interval
 
     def reset(
-            self,
-            level: int = logging.DEBUG,
-            log_format: str = "%(message)s",
-            log_file_name: str = None,
-            backup_count: int = 0,
-            when: int = "H",
-            interval: int = 1,
+        self,
+        level: int = logging.DEBUG,
+        log_format: str = "%(message)s",
+        log_file_name: str = None,
+        backup_count: int = 0,
+        when: int = "H",
+        interval: int = 1,
     ):
         self.level = level
         self.log_format = log_format
@@ -58,13 +58,13 @@ class Logger:
         self.__logger.setLevel(logger_config_global.level)
 
     def init(
-            self,
-            level: str = logger_config_global.level,
-            log_format: str = logger_config_global.log_format,
-            log_file_name: str = logger_config_global.log_file_name,
-            backup_count: int = logger_config_global.backup_count,
-            when: str = "H",
-            interval: int = 1
+        self,
+        level: str = logger_config_global.level,
+        log_format: str = logger_config_global.log_format,
+        log_file_name: str = logger_config_global.log_file_name,
+        backup_count: int = logger_config_global.backup_count,
+        when: str = "H",
+        interval: int = 1
     ):
         self.__logger.setLevel(level)
         # define formatter and handler
@@ -121,15 +121,15 @@ class Logger:
         formatted_msg = Logger._build_msg(log_id, msg)
         self.__logger.fatal(formatted_msg)
 
-    def log(self, level: int,  msg: str):
+    def log(self, level: int, msg: str):
         self.__logger.log(level, msg)
 
     def formatted_log(
-            self,
-            log_id: str,
-            address: EthAddress = None,
-            related_chain_name: str = DEFAULT_CHAIN_NAME,
-            msg: str = None
+        self,
+        log_id: str,
+        address: EthAddress = None,
+        related_chain_name: str = DEFAULT_CHAIN_NAME,
+        msg: str = None
     ):
         if log_id is None:
             return

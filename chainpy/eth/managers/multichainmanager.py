@@ -2,12 +2,13 @@ import json
 from typing import Optional, List
 
 from bridgeconst.consts import Asset
+
 from .utils import merge_dict
 from ..ethtype.account import EthAccount
 from ..ethtype.amount import EthAmount
-from ..ethtype.receipt import EthReceipt
 from ..ethtype.contract import EthContract
 from ..ethtype.hexbytes import EthHashBytes, EthAddress
+from ..ethtype.receipt import EthReceipt
 from ..ethtype.transaction import EthTransaction
 from ..managers.contracthandler import DetectedEvent
 from ..managers.ethchainmanager import EthChainManager
@@ -100,23 +101,28 @@ class MultiChainManager:
         chain_manager = self.get_chain_manager_of(chain_name)
         return chain_manager.call_transaction(contract_name, method_name, method_params)
 
-    def world_build_transaction(self,
-                                chain_name: str,
-                                contract_name: str,
-                                method_name: str,
-                                method_params: list, value: EthAmount = None) -> EthTransaction:
+    def world_build_transaction(
+        self,
+        chain_name: str,
+        contract_name: str,
+        method_name: str,
+        method_params: list, value: EthAmount = None
+    ) -> EthTransaction:
         chain_manager = self.get_chain_manager_of(chain_name)
         return chain_manager.build_transaction(contract_name, method_name, method_params, value)
 
-    def world_send_transaction(self,
-                               chain_name: str,
-                               tx_with_fee: EthTransaction,
-                               gas_limit_multiplier: float = 1.0) -> EthHashBytes:
+    def world_send_transaction(
+        self,
+        chain_name: str,
+        tx_with_fee: EthTransaction,
+        gas_limit_multiplier: float = 1.0
+    ) -> EthHashBytes:
         chain_manager = self.get_chain_manager_of(chain_name)
         return chain_manager.send_transaction(tx_with_fee, gas_limit_multiplier=gas_limit_multiplier)
 
     def world_receipt_with_wait(
-            self, chain_name: str, tx_hash: EthHashBytes, matured: bool = True) -> EthReceipt:
+        self, chain_name: str, tx_hash: EthHashBytes, matured: bool = True
+    ) -> EthReceipt:
         chain_manager = self.get_chain_manager_of(chain_name)
         return chain_manager.eth_receipt_with_wait(tx_hash, matured)
 
@@ -136,7 +142,8 @@ class MultiChainManager:
         return contract_obj.decode_event(detected_event.event_name, detected_event.data)
 
     def world_transfer_coin(
-            self, chain_name: str, to_addr: EthAddress, value: EthAmount) -> EthHashBytes:
+        self, chain_name: str, to_addr: EthAddress, value: EthAmount
+    ) -> EthHashBytes:
         chain_manager = self.get_chain_manager_of(chain_name)
         return chain_manager.transfer_native_coin(to_addr, value)
 

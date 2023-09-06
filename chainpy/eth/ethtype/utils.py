@@ -1,7 +1,7 @@
-import unittest
 import binascii
-from typing import Union, Any, TYPE_CHECKING
+import unittest
 from string import hexdigits, digits
+from typing import Union, Any, TYPE_CHECKING
 
 from eth_utils import keccak
 

@@ -35,7 +35,7 @@ class CoingeckoApi(PriceApiABC):
 
     @staticmethod
     def _parse_price_and_volume_from_queried_data(
-            query_id: str, queried_data: List[QueriedData]
+        query_id: str, queried_data: List[QueriedData]
     ) -> Tuple[Price, Volume]:
         for data in queried_data:
             if data["id"] == query_id:

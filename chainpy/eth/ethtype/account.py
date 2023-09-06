@@ -3,9 +3,9 @@ import unittest
 from typing import Union
 
 from eth_keys import KeyAPI
-from eth_keys.datatypes import PrivateKey, PublicKey, Signature, NonRecoverableSignature
 from eth_keys.backends import NativeECCBackend
 from eth_keys.constants import SECPK1_N
+from eth_keys.datatypes import PrivateKey, PublicKey, Signature, NonRecoverableSignature
 from eth_utils import keccak
 
 from .hexbytes import EthAddress, EthHexBytes, EthHashBytes

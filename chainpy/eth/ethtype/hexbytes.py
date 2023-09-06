@@ -1,4 +1,5 @@
 from typing import cast
+
 from .utils import *
 
 ETH_HASH_BYTES_SIZE = 32

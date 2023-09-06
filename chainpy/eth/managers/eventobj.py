@@ -1,7 +1,7 @@
 from typing import Union
 
-from ..ethtype.receipt import EthLog
 from ..ethtype.hexbytes import EthAddress, EthHashBytes, EthHexBytes
+from ..ethtype.receipt import EthLog
 
 
 class DetectedEvent:
