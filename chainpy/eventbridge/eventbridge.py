@@ -66,7 +66,7 @@ class EventBridge(MultiChainMonitor):
         super().__init__(multichain_config)
         self.cache = KeyValueCache(cache_value_type, max_length)
 
-    def has_key(self, key: int) -> bool:
+    def is_in_cache(self, key: int) -> bool:
         if self.cache is None:
             raise Exception("Authority checker is not initiated yet.")
         return self.cache.included_key(key)
