@@ -4,6 +4,8 @@ import threading
 from time import sleep
 from typing import Optional, Union, Any, Type
 
+from eth_typing import HexStr
+
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 from .multichainmonitor import MultiChainMonitor
 from .periodiceventabc import PeriodicEventABC
@@ -104,6 +106,7 @@ class EventBridge(MultiChainMonitor):
         if dst_chain_name == "" or dst_chain_name == DEFAULT_CHAIN_NAME or dst_chain_name is None:
             return None
 
+        chain_manager = self.get_chain_manager_of(dst_chain_name)
         try:
             # build and send transaction
             tx = self.world_build_transaction(dst_chain_name, contract_name, method_name, params)
@@ -127,6 +130,8 @@ class EventBridge(MultiChainMonitor):
                 event.time_lock = timestamp_msec() + 3000
                 self.queue.enqueue(event)
             else:
+                chain_manager.tx_manager.enqueue(tx_hash=HexStr(tx_hash.hex()))
+
                 """ set receipt params to the event """
                 delay = self.get_chain_manager_of(dst_chain_name).tx_commit_time_sec * 1000
                 receipt_time_lock = timestamp_msec() + delay
@@ -168,16 +173,24 @@ class EventBridge(MultiChainMonitor):
             msg="{}:receipt({}):{}".format(event.summary(), receipt_params.tx_hash.hex(), log_status)
         )
 
-        # restart relayer after 60 secs
+        # # restart relayer after 60 secs
+        # if log_status == "no-receipt":
+        #     global_logger.formatted_log(
+        #         "Receipt",
+        #         address=self.active_account.address,
+        #         related_chain_name=receipt_params.on_chain_name,
+        #         msg="{}:RestartAfter{}Second".format(event.summary(), 60)
+        #     )
+        #     sleep(60)
+        #     os.execl(sys.executable, sys.executable, *sys.argv)  # TODO: Remove super ugly reboot process
+
         if log_status == "no-receipt":
             global_logger.formatted_log(
                 "Receipt",
                 address=self.active_account.address,
                 related_chain_name=receipt_params.on_chain_name,
-                msg="{}:RestartAfter{}Second".format(event.summary(), 60)
+                msg=f"{event.summary()}:However, TransactionManager will resolve it"
             )
-            sleep(60)
-            os.execl(sys.executable, sys.executable, *sys.argv)
 
         updated_event = updating_func()
         self.queue.enqueue(updated_event)
@@ -208,21 +221,23 @@ class EventBridge(MultiChainMonitor):
         An entry method to run relayer including runners: chain monitor and transaction sender
         """
         # bootstrap historical event; result is dummy return for process sync.
-        _ = self.bootstrap_chain_events()
+        self.bootstrap_chain_events()
 
         # set oracle task to relay
-        self._generate_periodic_offchain_task()
+        self.generate_periodic_offchain_task()
 
-        # try:
-        monitor_th = threading.Thread(target=self.run_world_chain_monitor)
-        monitor_th.daemon = True
-        sender_th = threading.Thread(target=self.run_world_task_manager)
-        sender_th.daemon = True
-        monitor_th.start()
-        sender_th.start()
+        for chain_name in self.supported_chain_list:
+            tx_manager_t = threading.Thread(target=self.get_chain_manager_of(chain_name).tx_manager.run_transaction_manager, daemon=True)
+            tx_manager_t.start()
+
+        monitor_t = threading.Thread(target=self.run_world_chain_monitor, daemon=True)
+        monitor_t.start()
+
+        sender_t = threading.Thread(target=self.run_world_task_manager, daemon=True)
+        sender_t.start()
 
         while True:
-            monitor_alive = monitor_th.is_alive()
+            monitor_alive = monitor_t.is_alive()
             PrometheusExporter.exporting_thread_alive("monitor", monitor_alive)
             if not monitor_alive:
                 global_logger.formatted_log(
@@ -233,7 +248,7 @@ class EventBridge(MultiChainMonitor):
                 sleep(60)
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
-            sender_alive = sender_th.is_alive()
+            sender_alive = sender_t.is_alive()
             PrometheusExporter.exporting_thread_alive("sender", sender_alive)
             if not sender_alive:
                 global_logger.formatted_log(

@@ -14,6 +14,7 @@ from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.transaction import EthTransaction
 from ..managers.contracthandler import EthContractHandler
 from ..managers.utils import FeeConfig, merge_dict
+from ...eventbridge.transaction_manager import TransactionManager
 
 PRIORITY_FEE_MULTIPLIER = 4
 TYPE0_GAS_MULTIPLIER = 1.5
@@ -21,6 +22,10 @@ TYPE2_GAS_MULTIPLIER = 2
 
 
 class EthChainManager(EthContractHandler):
+    _account = EthAccount.from_secret("0xbfc")
+    _nonce = 0
+    _nonce_lock = threading.Lock()
+
     def __init__(
         self,
         url_with_access_key: str,
@@ -54,9 +59,7 @@ class EthChainManager(EthContractHandler):
             max_log_num
         )
 
-        self.__account = EthAccount.from_secret("0xbfc")
-        self.__nonce = 0
-        self.__nonce_lock = threading.Lock()
+        self.tx_manager = TransactionManager(url=url_with_access_key, chain_name=chain_name, block_period_sec=block_period_sec)
 
         if fee_config is None:
             self.__fee_config = FeeConfig.from_dict({"type": 0, "gas_price": 2 ** 255 - 1})
@@ -94,23 +97,24 @@ class EthChainManager(EthContractHandler):
 
     @property
     def account(self) -> Optional[EthAccount]:
-        return self.__account
+        return self._account
 
     @property
     def address(self) -> Optional[EthAddress]:
-        return None if self.__account is None else self.__account.address
+        return None if self._account is None else self._account.address
 
     def set_account(self, private_key: str):
-        self.__account = EthAccount.from_secret(private_key)
-        self.__nonce = self.eth_get_user_nonce(self.__account.address)
+        self._account = EthAccount.from_secret(private_key)
+        self._nonce = self.eth_get_user_nonce(self._account.address, 'latest')
+        self.tx_manager.set_signer(self._account.private_key)
 
     @property
     def issue_nonce(self) -> Optional[int]:
-        if self.__nonce is not None:
-            self.__nonce_lock.acquire()
-            nonce = self.__nonce
-            self.__nonce += 1
-            self.__nonce_lock.release()
+        if self._nonce is not None:
+            self._nonce_lock.acquire()
+            nonce = self._nonce
+            self._nonce += 1
+            self._nonce_lock.release()
             return nonce
         else:
             return None
@@ -155,12 +159,13 @@ class EthChainManager(EthContractHandler):
         method_name: str,
         method_params: list,
         sender_addr: EthAddress = None,
-        value: EthAmount = None) -> Union[EthHexBytes, tuple]:
+        value: EthAmount = None
+    ) -> Union[EthHexBytes, tuple]:
         data = self._encode_transaction_data(contract_name, method_name, method_params)
         contract_address = self.get_contract_by_name(contract_name).address
 
         if sender_addr is None:
-            sender_addr = self.__account.address
+            sender_addr = self._account.address
 
         call_tx = EthTransaction.init(self.chain_id, contract_address, value, data, sender_addr)
 
@@ -240,7 +245,7 @@ class EthChainManager(EthContractHandler):
         boost: bool = False,
         gas_limit_multiplier: float = 1.0
     ) -> EthHashBytes:
-        if self.__account is None:
+        if self._account is None:
             raise Exception("No account")
 
         # estimate tx and setting gas parameter
@@ -249,7 +254,7 @@ class EthChainManager(EthContractHandler):
             gas_limit=gas_limit,
             boost=boost,
             gas_limit_multiplier=gas_limit_multiplier,
-            sender_account=self.__account
+            sender_account=self._account
         )
 
         if is_sendable:
@@ -257,7 +262,7 @@ class EthChainManager(EthContractHandler):
 
             if not tx_with_fee.is_sendable():
                 raise Exception("Check transaction parameters")
-            signed_raw_tx = tx_with_fee.sign_transaction(self.__account)
+            signed_raw_tx = tx_with_fee.sign_transaction(self._account)
             tx_hash = self.eth_send_raw_transaction(signed_raw_tx)
             if tx_hash is None:
                 tx_hash = EthHashBytes.default()
@@ -266,19 +271,8 @@ class EthChainManager(EthContractHandler):
 
         return tx_hash
 
-    def transfer_native_coin(
-        self,
-        receiver: EthAddress,
-        value: EthAmount,
-        boost: bool = False
-    ) -> EthHashBytes:
-        if self.__account is None:
-            raise Exception("No Account")
-        raw_tx = EthTransaction.init(self.chain_id, receiver, value, EthHexBytes.default())
-        return self.send_transaction(raw_tx, boost=boost)
-
     def native_balance(self, addr: EthAddress = None) -> EthAmount:
-        if self.__account is None and addr is None:
+        if self._account is None and addr is None:
             raise Exception("No Account")
 
         if addr is None:

@@ -17,26 +17,26 @@ from ..managers.ethchainmanager import EthChainManager
 class MultiChainManager:
     def __init__(self, multichain_config: dict):
         entity_config = multichain_config["entity"]
-        self.__role = entity_config["role"].capitalize()
-        self.__account_name = entity_config.get("account_name")
+        self._role = entity_config["role"].capitalize()
+        self._account_name = entity_config.get("account_name")
 
-        self.__active_account = None
+        self._active_account = None
         private_key = entity_config.get("secret_hex")
         if private_key is not None and private_key != "":
-            self.__active_account = EthAccount.from_secret(private_key)
+            self._active_account = EthAccount.from_secret(private_key)
 
-        self.__supported_chains = entity_config["supporting_chains"]
+        self._supported_chains = entity_config["supporting_chains"]
 
         # config for each chain
-        self.__chain_managers = dict()
-        for chain_name in self.__supported_chains:
+        self._chain_managers = dict()
+        for chain_name in self._supported_chains:
             chain_config = multichain_config[chain_name]
             chain_manager = EthChainManager.from_config_dict(chain_config)
             if private_key is not None and private_key != "":
                 chain_manager.set_account(private_key)
-            self.__chain_managers[chain_name] = chain_manager
+            self._chain_managers[chain_name] = chain_manager
 
-        self.__multichain_config = multichain_config["multichain_config"]
+        self._multichain_config = multichain_config["multichain_config"]
 
     @classmethod
     def from_configs(cls, config: dict, private_config: dict):
@@ -58,41 +58,41 @@ class MultiChainManager:
         for chain_name in self.supported_chain_list:
             chain_manager = self.get_chain_manager_of(chain_name)
             chain_manager.set_account(private_key)
-        self.__active_account = EthAccount.from_secret(private_key)
+        self._active_account = EthAccount.from_secret(private_key)
 
     @property
     def role(self) -> str:
-        return self.__role
+        return self._role
 
     @role.setter
     def role(self, role: str):
         capitalized_role = role.capitalize()
         if capitalized_role not in ["User", "Fast-relayer", "Slow-relayer", "Relayer"]:
             raise Exception("Invalid role: {}".format(role))
-        self.__role = capitalized_role
+        self._role = capitalized_role
 
     @property
     def account_name(self) -> Optional[str]:
-        return self.__account_name
+        return self._account_name
 
     @property
     def active_account(self) -> Optional[EthAccount]:
-        return self.__active_account
+        return self._active_account
 
     @property
     def address(self) -> Optional[EthAddress]:
-        return None if self.__active_account is None else self.__active_account.address
+        return None if self._active_account is None else self._active_account.address
 
     @property
     def supported_chain_list(self) -> List[str]:
-        return list(self.__chain_managers.keys())
+        return list(self._chain_managers.keys())
 
     @property
     def multichain_config(self) -> dict:
-        return self.__multichain_config
+        return self._multichain_config
 
     def get_chain_manager_of(self, chain_name: str) -> EthChainManager:
-        return self.__chain_managers.get(chain_name)
+        return self._chain_managers.get(chain_name)
 
     def get_contract_obj_on(self, chain_name: str, contract_name: str) -> Optional[EthContract]:
         return self.get_chain_manager_of(chain_name).get_contract_by_name(contract_name)
@@ -132,7 +132,7 @@ class MultiChainManager:
 
     def collect_unchecked_multichain_events(self) -> List[DetectedEvent]:
         unchecked_events = list()
-        for chain_name in self.__supported_chains:
+        for chain_name in self._supported_chains:
             chain_manager = self.get_chain_manager_of(chain_name)
             unchecked_events += chain_manager.collect_unchecked_single_chain_events()
         return unchecked_events
@@ -140,12 +140,6 @@ class MultiChainManager:
     def decode_event(self, detected_event: DetectedEvent) -> tuple:
         contract_obj = self.get_contract_obj_on(detected_event.chain_name, detected_event.contract_name)
         return contract_obj.decode_event(detected_event.event_name, detected_event.data)
-
-    def world_transfer_coin(
-        self, chain_name: str, to_addr: EthAddress, value: EthAmount
-    ) -> EthHashBytes:
-        chain_manager = self.get_chain_manager_of(chain_name)
-        return chain_manager.transfer_native_coin(to_addr, value)
 
     def world_balance(self, chain_name: str, asset: Asset = None, user_addr: EthAddress = None) -> EthAmount:
         chain_manager = self.get_chain_manager_of(chain_name)

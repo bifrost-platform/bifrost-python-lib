@@ -36,27 +36,22 @@ class PrometheusExporter:
             raise Exception("Not supported thread_type")
 
     @staticmethod
-    def exporting_rpc_requested(chain_name: str):
-        if not PrometheusExporter.PROMETHEUS_ON:
-            return
-
-        chain_name = chain_name.lower()
+    def init_undefined_metrics(chain_name: str):
         if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
             PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
             PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
             PrometheusExporter.RPC_CHAIN_INIT[chain_name] = True
 
+    def exporting_rpc_requested(self, chain_name: str):
+        if not PrometheusExporter.PROMETHEUS_ON:
+            return
+        chain_name = chain_name.lower()
+        self.init_undefined_metrics(chain_name)
         PrometheusExporter.RPC_REQUESTED.labels(chain_name).inc()
 
-    @staticmethod
-    def exporting_rpc_failed(chain_name: str):
+    def exporting_rpc_failed(self, chain_name: str):
         if not PrometheusExporter.PROMETHEUS_ON:
             return
-
         chain_name = chain_name.lower()
-        if PrometheusExporter.RPC_CHAIN_INIT.get(chain_name) is None:
-            PrometheusExporter.RPC_REQUESTED.labels(chain_name).set(0)
-            PrometheusExporter.RPC_FAILED.labels(chain_name).set(0)
-            PrometheusExporter.RPC_CHAIN_INIT[chain_name] = True
-
+        self.init_undefined_metrics(chain_name)
         PrometheusExporter.RPC_FAILED.labels(chain_name).inc()

@@ -41,7 +41,7 @@ def merge_dict(base_dict: dict, add_dict: dict):
 
 
 def hex_height_or_latest(height: Union[int, str] = "latest") -> str:
-    if height == "latest":
+    if height in ["latest", "earliest", "pending", "safe", "finalized"]:
         return height
     if isinstance(height, int):
         return hex(height)

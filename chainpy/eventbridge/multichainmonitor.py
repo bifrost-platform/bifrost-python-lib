@@ -23,7 +23,7 @@ class TimePriorityQueue:
     STAY_PERIOD_SEC = 180  # 3 minutes
 
     def __init__(self, max_size: int = -1):
-        self.__queue = PriorityQueue(maxsize=max_size)
+        self._queue = PriorityQueue(maxsize=max_size)
 
     def enqueue(self, event: Union[ChainEventABC, PeriodicEventABC]):
         # do nothing for a none event
@@ -41,17 +41,16 @@ class TimePriorityQueue:
             )
 
         # enqueue item with time lock
-        self.__queue.put((event.time_lock, event))
+        self._queue.put((event.time_lock, event))
 
     def pop(self) -> Union[ChainEventABC, PeriodicEventABC, None]:
         """ Pop the item with the soonest time lock, or block this process until the queue is not empty. """
-        return self.__queue.get()[1]
-
-    def is_empty(self) -> bool:
-        return self.__queue.empty()
+        item = self._queue.get()[1]
+        self._queue.task_done()
+        return item
 
     def qsize(self) -> int:
-        return self.__queue.qsize()
+        return self._queue.qsize()
 
     def pop_matured_event(self):
         """ Pop an item with a time lock earlier than the current time. (or block process) """
@@ -68,36 +67,36 @@ class TimePriorityQueue:
 class MultiChainMonitor(MultiChainManager):
     def __init__(self, multichain_config: dict):
         super().__init__(multichain_config)
-        self.__queue = TimePriorityQueue()
-        self.__events_types = dict()  # event_name to event_type
-        self.__offchain_source_types = dict()
+        self._queue = TimePriorityQueue()
+        self._events_types = dict()  # event_name to event_type
+        self._offchain_source_types = dict()
 
     @property
     def queue(self) -> TimePriorityQueue:
-        return self.__queue
+        return self._queue
 
     @queue.setter
     def queue(self, queue: TimePriorityQueue):
-        self.__queue = queue
+        self._queue = queue
 
     def register_chain_event_obj(self, event_name: str, event_type: type):
         if not issubclass(event_type, ChainEventABC):
             raise Exception("event type to be registered must subclass of EventABC")
-        if event_name in self.__events_types.keys():
+        if event_name in self._events_types.keys():
             raise Exception("Already existing type: {}".format(event_type))
-        self.__events_types[event_name] = event_type
+        self._events_types[event_name] = event_type
 
     def register_offchain_event_obj(self, source_id: str, source_type: type):
         if not issubclass(source_type, PeriodicEventABC):
             raise Exception("oracle source type to be registered must subclass of EventABC")
-        if source_id in self.__offchain_source_types.keys():
+        if source_id in self._offchain_source_types.keys():
             raise Exception("Already existing type: {}".format(source_type))
-        self.__offchain_source_types[source_id] = source_type
+        self._offchain_source_types[source_id] = source_type
 
-    def _generate_periodic_offchain_task(self):
-        for source_id, source_type in self.__offchain_source_types.items():
+    def generate_periodic_offchain_task(self):
+        for source_id, source_type in self._offchain_source_types.items():
             source_obj = source_type(self)
-            self.__queue.enqueue(source_obj)
+            self._queue.enqueue(source_obj)
 
     @staticmethod
     def extract_specific_events(
@@ -125,11 +124,11 @@ class MultiChainMonitor(MultiChainManager):
                 msg="CollectEvents:from({}):to({})".format(start_height, chain_manager.latest_height)
             )
 
-        for event_name, event_class in self.__events_types.items():
+        for event_name, event_class in self._events_types.items():
             target_events, detected_events = self.extract_specific_events(event_name, detected_events)
             not_handled_events = event_class.bootstrap(self, target_events)
             for not_handled_event in not_handled_events:
-                self.__queue.enqueue(not_handled_event)
+                self._queue.enqueue(not_handled_event)
         return True
 
     def run_world_chain_monitor(self):
@@ -139,11 +138,10 @@ class MultiChainMonitor(MultiChainManager):
         while True:
             detected_events = self.collect_unchecked_multichain_events()
             for detected_event in detected_events:
-                event_name = detected_event.event_name
-                event_type = self.__events_types[event_name]
+                event_type = self._events_types[detected_event.event_name]
 
                 chain_event = event_type.init(detected_event, timestamp_msec(), self)
-                self.__queue.enqueue(chain_event)
+                self._queue.enqueue(chain_event)
 
                 if chain_event is not None:
                     global_logger.formatted_log(
