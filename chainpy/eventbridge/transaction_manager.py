@@ -5,6 +5,7 @@ from typing import Union
 from eth_keys.datatypes import PrivateKey
 from eth_typing import HexStr
 from web3 import Web3
+from web3.exceptions import TransactionNotFound
 from web3.middleware import construct_sign_and_send_raw_middleware
 from web3.types import TxData
 
@@ -28,15 +29,24 @@ class TransactionManager:
         if tx_hash is None:
             return
         else:
-            nonce = self.w3.eth.get_transaction(tx_hash)['nonce']
-            self.queue.put((nonce, tx_hash))
+            for i in range(0, 5):
+                try:
+                    nonce = self.w3.eth.get_transaction(tx_hash)['nonce']
+                    self.queue.put((nonce, tx_hash))
+                except TransactionNotFound:
+                    continue
+            return
 
     def run_transaction_manager(self):
         while True:
             while self.queue.not_empty:
                 pending_hash: HexStr = self.queue.get()[1]
 
-                transaction: TxData = self.w3.eth.get_transaction(transaction_hash=pending_hash)
+                try:
+                    transaction: TxData = self.w3.eth.get_transaction(transaction_hash=pending_hash)
+                except TransactionNotFound:
+                    raise Exception(f"Undone action lost in txpool. tx_hash: {pending_hash}")
+
                 if transaction['blockHash'] is None:
                     new_tx_hash = self.w3.eth.replace_transaction(transaction_hash=pending_hash, new_transaction={
                         'to': transaction['to'],
@@ -45,6 +55,7 @@ class TransactionManager:
                         'data': transaction['data'],
                     })
                     self.queue.put((transaction['nonce'], HexStr(new_tx_hash.hex())))
+
                 self.queue.task_done()
 
             time.sleep(self.block_period_sec)
