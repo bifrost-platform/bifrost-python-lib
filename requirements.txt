@@ -11,6 +11,5 @@ jsonpath-ng==1.6.0
 jsonrpcserver
 fastapi==0.103.1
 uvicorn==0.23.2
-starlette==0.31.1
 psutil
 web3==6.9.0
