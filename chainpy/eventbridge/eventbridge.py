@@ -130,7 +130,7 @@ class EventBridge(MultiChainMonitor):
                 event.time_lock = timestamp_msec() + 3000
                 self.queue.enqueue(event)
             else:
-                chain_manager.tx_manager.enqueue(tx_hash=HexStr(tx_hash.hex()))
+                # chain_manager.tx_manager.enqueue(tx_hash=HexStr(tx_hash.hex()))
 
                 """ set receipt params to the event """
                 delay = self.get_chain_manager_of(dst_chain_name).tx_commit_time_sec * 1000

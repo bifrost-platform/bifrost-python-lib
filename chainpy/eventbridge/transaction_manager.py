@@ -33,28 +33,32 @@ class TransactionManager:
                 try:
                     nonce = self.w3.eth.get_transaction(tx_hash)['nonce']
                     self.queue.put((nonce, tx_hash))
+                    break
                 except TransactionNotFound:
+                    time.sleep(1)
                     continue
             return
 
     def run_transaction_manager(self):
         while True:
             while self.queue.not_empty:
-                pending_hash: HexStr = self.queue.get()[1]
+                pending: (int, HexStr) = self.queue.get()
 
-                try:
-                    transaction: TxData = self.w3.eth.get_transaction(transaction_hash=pending_hash)
-                except TransactionNotFound:
-                    raise Exception(f"Undone action lost in txpool. tx_hash: {pending_hash}")
+                for i in range(0, 5):
+                    try:
+                        transaction: TxData = self.w3.eth.get_transaction(transaction_hash=pending[1])
+                        if transaction['blockHash'] is None:
+                            new_tx_hash = self.w3.eth.replace_transaction(transaction_hash=pending[1], new_transaction={
+                                'to': transaction['to'],
+                                'from': transaction['from'],
+                                'value': transaction['value'],
+                                'data': transaction['input'],
+                                'gas': transaction['gas']
+                            })
+                            self.queue.put((pending[0], HexStr(new_tx_hash.hex())))
 
-                if transaction['blockHash'] is None:
-                    new_tx_hash = self.w3.eth.replace_transaction(transaction_hash=pending_hash, new_transaction={
-                        'to': transaction['to'],
-                        'from': transaction['from'],
-                        'value': transaction['value'],
-                        'data': transaction['input'],
-                    })
-                    self.queue.put((transaction['nonce'], HexStr(new_tx_hash.hex())))
+                    except TransactionNotFound:
+                        raise Exception(f"Undone action lost in txpool. tx_hash: {pending[1]}")
 
                 self.queue.task_done()
 
