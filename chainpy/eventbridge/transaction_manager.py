@@ -52,7 +52,7 @@ class TransactionManager:
                         'to': transaction['to'],
                         'from': transaction['from'],
                         'value': transaction['value'],
-                        'data': transaction['data'],
+                        'data': transaction['input'],
                     })
                     self.queue.put((transaction['nonce'], HexStr(new_tx_hash.hex())))
 
