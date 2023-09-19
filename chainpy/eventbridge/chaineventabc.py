@@ -12,7 +12,7 @@ ReceiptParamTuple = Tuple[str, EthHashBytes]
 SendParamTuple = Tuple[str, str, str, Union[tuple, list]]
 CallParamTuple = Tuple[str, str, str, Union[tuple, list]]
 
-BASIC_GAS_LIMIT_MULTIPLIER = 1.2
+BASIC_GAS_LIMIT_MULTIPLIER = 7.0
 
 
 class ReceiptParams:
