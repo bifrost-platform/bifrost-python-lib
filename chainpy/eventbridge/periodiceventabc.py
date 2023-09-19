@@ -82,7 +82,8 @@ class PeriodicEventABC(metaclass=ABCMeta):
         self.__receipt_params = None
         self.__task_status = TaskStatus.SendTX
 
-    def gas_limit_multiplier(self) -> float:
+    @staticmethod
+    def gas_limit_multiplier() -> float:
         return BASIC_GAS_LIMIT_MULTIPLIER
 
     @abstractmethod

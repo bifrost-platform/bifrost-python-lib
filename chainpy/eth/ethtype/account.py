@@ -55,7 +55,7 @@ class EthAccount:
     def ecdsa_sign_on_digest(self, msg_digest: bytes) -> NonRecoverableSignature:
         return self._private_key_obj.sign_msg_hash_non_recoverable(msg_digest)
 
-    def ecdsa_recoverable_sign(self, msg: bytes, chain_id: int = None) -> Signature:
+    def ecdsa_recoverable_sign(self, msg: bytes) -> Signature:
         return self._private_key_obj.sign_msg(msg)
 
     def ecdsa_recoverable_sign_on_digest(self, msg_digest: bytes):

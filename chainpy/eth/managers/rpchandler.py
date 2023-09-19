@@ -128,7 +128,7 @@ class EthRpcClient:
         }
         headers = {'Content-type': 'application/json'}
 
-        PrometheusExporter.exporting_rpc_requested(self.chain_name)
+        PrometheusExporter.exporting_rpc_requested(chain_name=self.chain_name)
         self.call_num += 1
 
         response = requests.post(self.url, json=body, headers=headers)
@@ -149,7 +149,7 @@ class EthRpcClient:
                 break
             except RpcOutOfStatusCode or JSONDecodeError as e:
                 # export log for out-of-status error
-                PrometheusExporter.exporting_rpc_failed(self.chain_name)
+                PrometheusExporter.exporting_rpc_failed(chain_name=self.chain_name)
                 global_logger.formatted_log("RPCException", related_chain_name=self.__chain_name, msg=str(e))
 
                 # sleep
@@ -175,7 +175,7 @@ class EthRpcClient:
             return response_json["result"]
 
         # Evm error always gets caught here.
-        PrometheusExporter.exporting_rpc_failed(self.chain_name)
+        PrometheusExporter.exporting_rpc_failed(chain_name=self.chain_name)
         if "error" in list(response_json.keys()):
             raise_integrated_exception(self.chain_name, error_json=response_json["error"])
         else:

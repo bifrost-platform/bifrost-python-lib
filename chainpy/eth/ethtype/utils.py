@@ -43,7 +43,7 @@ def hex_str_to_bytes(hex_str: str) -> bytes:
 
 def to_bytes(val: Union[bool, bytearray, bytes, int, str]) -> bytes:
     """
-    Convert a hex string, integer, or bool, to a bytes representation.
+    Convert a hex string, integer, or bool, to a bytes' representation.
     Alternatively, pass through bytes or bytearray as a bytes value.
     """
     if isinstance(val, bytes):
