@@ -229,7 +229,7 @@ class EthChainManager(EthContractHandler):
             if boost:
                 net_base_fee_price = int(net_base_fee_price * 1.1)
                 net_priority_fee_price = int(net_priority_fee_price * 1.1)
-            net_max_gas_price = int((net_priority_fee_price + net_base_fee_price) * TYPE0_GAS_MULTIPLIER)
+            net_max_gas_price = int((net_priority_fee_price + net_base_fee_price) * TYPE2_GAS_MULTIPLIER)
 
             is_sendable1 = True if net_priority_fee_price < self.fee_config.max_priority_price else False
             is_sendable2 = True if net_max_gas_price < self.fee_config.max_gas_price else False
