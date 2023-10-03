@@ -14,7 +14,6 @@ from ..ethtype.hexbytes import EthHashBytes, EthAddress, EthHexBytes
 from ..ethtype.transaction import EthTransaction
 from ..managers.contracthandler import EthContractHandler
 from ..managers.utils import FeeConfig, merge_dict
-from ...eventbridge.transaction_manager import TransactionManager
 
 PRIORITY_FEE_MULTIPLIER = 4
 TYPE0_GAS_MULTIPLIER = 1.5
@@ -58,8 +57,6 @@ class EthChainManager(EthContractHandler):
             latest_height,
             max_log_num
         )
-
-        self.tx_manager = TransactionManager(url=url_with_access_key, chain_name=chain_name, block_period_sec=block_period_sec)
 
         if fee_config is None:
             self.__fee_config = FeeConfig.from_dict({"type": 0, "gas_price": 2 ** 255 - 1})
@@ -106,7 +103,7 @@ class EthChainManager(EthContractHandler):
     def set_account(self, private_key: str):
         self._account = EthAccount.from_secret(private_key)
         self._nonce = self.eth_get_user_nonce(self._account.address, 'latest')
-        self.tx_manager.set_signer(self._account.private_key)
+        super().set_signer(self._account.private_key)
 
     @property
     def issue_nonce(self) -> Optional[int]:

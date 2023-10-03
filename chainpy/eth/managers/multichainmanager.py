@@ -121,10 +121,14 @@ class MultiChainManager:
         return chain_manager.send_transaction(tx_with_fee, gas_limit_multiplier=gas_limit_multiplier)
 
     def world_receipt_with_wait(
-        self, chain_name: str, tx_hash: EthHashBytes, matured: bool = True
+        self, chain_name: str, tx_hash: EthHashBytes
     ) -> EthReceipt:
         chain_manager = self.get_chain_manager_of(chain_name)
-        return chain_manager.eth_receipt_with_wait(tx_hash, matured)
+        return chain_manager.eth_receipt_with_wait(tx_hash)
+
+    def try_replace_transaction(self, chain_name: str, tx_hash: EthHashBytes) -> (EthHashBytes, bool):
+        chain_manager = self.get_chain_manager_of(chain_name)
+        return chain_manager.eth_replace_transaction(tx_hash)
 
     def world_receipt_without_wait(self, chain_name: str, tx_hash: EthHashBytes) -> EthReceipt:
         chain_manager = self.get_chain_manager_of(chain_name)
