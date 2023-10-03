@@ -55,8 +55,9 @@ class TestMultiChainManager(unittest.TestCase):
                 self.assertTrue(chain_manager.chain_id, int(MOCK_CHAIN_ID, 16))
                 self.assertEqual(chain_manager.url, ENDPOINT_URL)
                 self.assertEqual(chain_manager.resend_delay_sec, 3)
-                expected_tx_commit_time = DEFAULT_BLOCK_PERIOD_SECS * \
-                                          (DEFAULT_RPC_TX_BLOCK_DELAY + DEFAULT_BLOCK_AGING_BLOCKS)
+                expected_tx_commit_time = (
+                        DEFAULT_BLOCK_PERIOD_SECS * (DEFAULT_RPC_TX_BLOCK_DELAY + DEFAULT_BLOCK_AGING_BLOCKS)
+                )
                 self.assertEqual(chain_manager.tx_commit_time_sec, expected_tx_commit_time)
 
                 # Set to default config if config does not have fee information

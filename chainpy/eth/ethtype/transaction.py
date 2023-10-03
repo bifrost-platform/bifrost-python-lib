@@ -171,7 +171,7 @@ class EthTransaction:
 
     def sign_transaction(self, account: EthAccount) -> EthHexBytes:
         transaction = self.send_dict(encoded=True)
-        signed_tx = Account.sign_transaction(transaction, hex(account.priv))
+        signed_tx = Account.sign_transaction(transaction, hex(account.private_key))
         return EthHexBytes(signed_tx.rawTransaction)
 
     def serialize(self) -> EthHexBytes:

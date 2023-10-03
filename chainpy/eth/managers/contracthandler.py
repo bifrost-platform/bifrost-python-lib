@@ -1,5 +1,8 @@
 from typing import List, Optional, Dict, Any, Union
 
+from eth_keys.datatypes import PrivateKey
+from web3.middleware import construct_sign_and_send_raw_middleware
+
 from .eventobj import DetectedEvent
 from .rpchandler import EthRpcClient, DEFAULT_RECEIPT_MAX_RETRY, DEFAULT_BLOCK_PERIOD_SECS, \
     DEFAULT_BLOCK_AGING_BLOCKS, DEFAULT_RPC_RESEND_DELAY_SEC, DEFAULT_RPC_TX_BLOCK_DELAY
@@ -144,6 +147,9 @@ class EthContractHandler(EthRpcClient):
     def max_log_num(self) -> int:
         """ Maximum lookup range for the eth_getLog. """
         return self._max_log_num
+
+    def set_signer(self, private_key: PrivateKey):
+        self.w3.middleware_onion.add(construct_sign_and_send_raw_middleware(private_key_or_account=private_key))
 
     def get_contract_by_name(self, contract_name: str) -> Optional[EthContract]:
         return self._contracts.get(contract_name)

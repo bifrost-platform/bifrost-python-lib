@@ -98,13 +98,13 @@ class AbiMethod:
             encoded_data = EthHexBytes(encoded_data)
         target_data = encoded_data[4:] if include_function_selector else encoded_data
         types_list = self.get_input_types_list()
-        return eth_abi.decode_abi(types_list, target_data)
+        return eth_abi.decode(types_list, target_data)
 
     def decode_output_data(self, encoded_data: Union[str, EthHexBytes]):
         if isinstance(encoded_data, str):
             encoded_data = EthHexBytes(encoded_data)
         types_list = self.get_output_types_list()
-        return eth_abi.decode_abi(types_list, encoded_data)
+        return eth_abi.decode(types_list, encoded_data)
 
     def decode_event_data(self, encoded_data: Union[str, EthHexBytes]):
         return self.decode_input_data(encoded_data, include_function_selector=False)
@@ -116,12 +116,12 @@ class AbiMethod:
 
     def encode_input_data_without_selector(self, params: Union[list, tuple]) -> EthHexBytes:
         types_list = self.get_input_types_list()
-        encoded_raw = eth_abi.encode_abi(types_list, params)
+        encoded_raw = eth_abi.encode(types_list, params)
         return EthHexBytes(encoded_raw)
 
     def encode_output_data(self, params: Union[list, tuple]) -> EthHexBytes:
         types_list = self.get_input_types_list()
-        out_data = eth_abi.encode_abi(types_list, params)
+        out_data = eth_abi.encode(types_list, params)
         return EthHexBytes(out_data)
 
 

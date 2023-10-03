@@ -12,7 +12,7 @@ ReceiptParamTuple = Tuple[str, EthHashBytes]
 SendParamTuple = Tuple[str, str, str, Union[tuple, list]]
 CallParamTuple = Tuple[str, str, str, Union[tuple, list]]
 
-BASIC_GAS_LIMIT_MULTIPLIER = 1.2
+BASIC_GAS_LIMIT_MULTIPLIER = 7.0
 
 
 class ReceiptParams:
@@ -133,7 +133,8 @@ class ChainEventABC(metaclass=ABCMeta):
         self.__receipt_params = None
         self.__task_status = TaskStatus.SendTX
 
-    def gas_limit_multiplier(self) -> float:
+    @staticmethod
+    def gas_limit_multiplier() -> float:
         return BASIC_GAS_LIMIT_MULTIPLIER
 
     @abstractmethod

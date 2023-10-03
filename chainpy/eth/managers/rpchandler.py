@@ -4,7 +4,11 @@ from json import JSONDecodeError
 from typing import List, Optional, Union
 
 import requests
+from eth_typing import HexStr
 from requests import Response
+from web3 import Web3
+from web3.exceptions import TimeExhausted, TransactionNotFound
+from web3.types import TxReceipt, TxData
 
 from .consts import *
 from .exceptions import raise_integrated_exception, RpcOutOfStatusCode, RpCMaxRetry
@@ -58,6 +62,8 @@ class EthRpcClient:
         if self.__url_with_access_key:
             resp = self.send_request("eth_chainId", [])
             self.__chain_id = int(resp, 16)
+
+        self.w3 = Web3(Web3.HTTPProvider(url_with_access_key))
 
     @classmethod
     def from_config_dict(cls, config: dict, private_config: dict = None):
@@ -128,7 +134,7 @@ class EthRpcClient:
         }
         headers = {'Content-type': 'application/json'}
 
-        PrometheusExporter.exporting_rpc_requested(self.chain_name)
+        PrometheusExporter.exporting_rpc_requested(chain_name=self.chain_name)
         self.call_num += 1
 
         response = requests.post(self.url, json=body, headers=headers)
@@ -149,7 +155,7 @@ class EthRpcClient:
                 break
             except RpcOutOfStatusCode or JSONDecodeError as e:
                 # export log for out-of-status error
-                PrometheusExporter.exporting_rpc_failed(self.chain_name)
+                PrometheusExporter.exporting_rpc_failed(chain_name=self.chain_name)
                 global_logger.formatted_log("RPCException", related_chain_name=self.__chain_name, msg=str(e))
 
                 # sleep
@@ -175,7 +181,7 @@ class EthRpcClient:
             return response_json["result"]
 
         # Evm error always gets caught here.
-        PrometheusExporter.exporting_rpc_failed(self.chain_name)
+        PrometheusExporter.exporting_rpc_failed(chain_name=self.chain_name)
         if "error" in list(response_json.keys()):
             raise_integrated_exception(self.chain_name, error_json=response_json["error"])
         else:
@@ -274,13 +280,29 @@ class EthRpcClient:
     def eth_receipt_without_wait(self, tx_hash: EthHashBytes, matured_only: bool = False) -> Optional[EthReceipt]:
         return self._get_receipt(tx_hash, matured_only)
 
-    def eth_receipt_with_wait(self, tx_hash: EthHashBytes, matured_only: bool = False) -> Optional[EthReceipt]:
-        for i in range(self.__receipt_max_try):
-            receipt = self._get_receipt(tx_hash, matured_only)
-            if receipt is not None:
-                return receipt
-            time.sleep(self.__block_period_sec / 2)  # wait half block
-        return None
+    def eth_receipt_with_wait(self, tx_hash: EthHashBytes) -> Optional[TxReceipt]:
+        try:
+            return self.w3.eth.wait_for_transaction_receipt(transaction_hash=tx_hash, timeout=self.__block_period_sec)
+        except TimeExhausted:
+            return None
+
+    def eth_replace_transaction(self, tx_hash: EthHashBytes) -> (EthHashBytes, bool):
+        try:
+            transaction: TxData = self.w3.eth.get_transaction(transaction_hash=HexStr(tx_hash.hex()))
+            if transaction['blockHash'] is None:
+                new_tx_hash = self.w3.eth.replace_transaction(transaction_hash=tx_hash, new_transaction={
+                    'to': transaction['to'],
+                    'from': transaction['from'],
+                    'value': transaction['value'],
+                    'data': transaction['input'],
+                    'gas': transaction['gas']
+                })
+                return EthHashBytes(new_tx_hash.hex()), True
+            else:
+                return tx_hash, False
+
+        except TransactionNotFound:
+            raise Exception(f"Undone action lost in txpool.")
 
     def eth_get_logs(
         self,

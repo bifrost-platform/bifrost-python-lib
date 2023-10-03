@@ -4,6 +4,8 @@ import threading
 from time import sleep
 from typing import Optional, Union, Any, Type
 
+from web3.exceptions import TransactionNotFound
+
 from .chaineventabc import ChainEventABC, TaskStatus, ReceiptParams
 from .multichainmonitor import MultiChainMonitor
 from .periodiceventabc import PeriodicEventABC
@@ -152,6 +154,28 @@ class EventBridge(MultiChainMonitor):
         if receipt is None:
             updating_func = event.handle_tx_result_fail
             log_status = "no-receipt"
+            try:
+                new_tx_hash, replaced = self.try_replace_transaction(chain_name=receipt_params.on_chain_name, tx_hash=receipt_params.tx_hash)
+                if replaced:
+                    global_logger.formatted_log(
+                        "Receipt",
+                        address=self.active_account.address,
+                        related_chain_name=receipt_params.on_chain_name,
+                        msg="{}:Replaced: {} -> {}".format(event.summary(), receipt_params.tx_hash, new_tx_hash)
+                    )
+                    event.switch_to_check_receipt(
+                        target_chain_name=receipt_params.on_chain_name,
+                        tx_hash=new_tx_hash,
+                        time_lock=0
+                    )
+                    self.queue.enqueue(event)
+                    return
+                else:
+                    event.time_lock = 0
+                    self.queue.enqueue(event)
+                    return
+            except TransactionNotFound:
+                pass
         elif receipt.status == 1:
             updating_func = event.handle_tx_result_success
             log_status = "success"
@@ -177,7 +201,7 @@ class EventBridge(MultiChainMonitor):
                 msg="{}:RestartAfter{}Second".format(event.summary(), 60)
             )
             sleep(60)
-            os.execl(sys.executable, sys.executable, *sys.argv)
+            os.execl(sys.executable, sys.executable, *sys.argv)  # TODO: Remove super ugly reboot process
 
         updated_event = updating_func()
         self.queue.enqueue(updated_event)
@@ -208,21 +232,19 @@ class EventBridge(MultiChainMonitor):
         An entry method to run relayer including runners: chain monitor and transaction sender
         """
         # bootstrap historical event; result is dummy return for process sync.
-        _ = self.bootstrap_chain_events()
+        self.bootstrap_chain_events()
 
         # set oracle task to relay
-        self._generate_periodic_offchain_task()
+        self.generate_periodic_offchain_task()
 
-        # try:
-        monitor_th = threading.Thread(target=self.run_world_chain_monitor)
-        monitor_th.daemon = True
-        sender_th = threading.Thread(target=self.run_world_task_manager)
-        sender_th.daemon = True
-        monitor_th.start()
-        sender_th.start()
+        monitor_t = threading.Thread(target=self.run_world_chain_monitor, daemon=True)
+        monitor_t.start()
+
+        sender_t = threading.Thread(target=self.run_world_task_manager, daemon=True)
+        sender_t.start()
 
         while True:
-            monitor_alive = monitor_th.is_alive()
+            monitor_alive = monitor_t.is_alive()
             PrometheusExporter.exporting_thread_alive("monitor", monitor_alive)
             if not monitor_alive:
                 global_logger.formatted_log(
@@ -233,7 +255,7 @@ class EventBridge(MultiChainMonitor):
                 sleep(60)
                 os.execl(sys.executable, sys.executable, *sys.argv)
 
-            sender_alive = sender_th.is_alive()
+            sender_alive = sender_t.is_alive()
             PrometheusExporter.exporting_thread_alive("sender", sender_alive)
             if not sender_alive:
                 global_logger.formatted_log(

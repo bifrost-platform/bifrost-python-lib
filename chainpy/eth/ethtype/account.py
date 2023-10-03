@@ -15,9 +15,9 @@ NATIVE_KEY_API = KeyAPI(backend=NativeECCBackend())
 
 class EthAccount:
     def __init__(self, private_key: PrivateKey):
-        self.__private_key_obj: PrivateKey = private_key
-        self.__public_key_obj = None
-        self.__address = None
+        self._private_key_obj: PrivateKey = private_key
+        self._public_key_obj = None
+        self._address = None
 
     @classmethod
     def generate(cls):
@@ -34,32 +34,32 @@ class EthAccount:
         return cls(private_key_obj)
 
     @property
-    def priv(self) -> int:
-        return int(self.__private_key_obj.to_hex(), 16)
+    def private_key(self) -> PrivateKey:
+        return self._private_key_obj
 
     @property
     def public_key(self) -> PublicKey:
-        if self.__public_key_obj is None:
-            self.__public_key_obj = self.__private_key_obj.public_key
-        return self.__public_key_obj
+        if self._public_key_obj is None:
+            self._public_key_obj = self._private_key_obj.public_key
+        return self._public_key_obj
 
     @property
     def address(self) -> EthAddress:
-        if self.__address is None:
-            self.__address = EthAddress(self.public_key.to_address())
-        return self.__address
+        if self._address is None:
+            self._address = EthAddress(self.public_key.to_address())
+        return self._address
 
     def ecdsa_sign(self, msg: bytes) -> NonRecoverableSignature:
-        return self.__private_key_obj.sign_msg_non_recoverable(msg)
+        return self._private_key_obj.sign_msg_non_recoverable(msg)
 
     def ecdsa_sign_on_digest(self, msg_digest: bytes) -> NonRecoverableSignature:
-        return self.__private_key_obj.sign_msg_hash_non_recoverable(msg_digest)
+        return self._private_key_obj.sign_msg_hash_non_recoverable(msg_digest)
 
-    def ecdsa_recoverable_sign(self, msg: bytes, chain_id: int = None) -> Signature:
-        return self.__private_key_obj.sign_msg(msg)
+    def ecdsa_recoverable_sign(self, msg: bytes) -> Signature:
+        return self._private_key_obj.sign_msg(msg)
 
     def ecdsa_recoverable_sign_on_digest(self, msg_digest: bytes):
-        return self.__private_key_obj.sign_msg_hash(msg_digest)
+        return self._private_key_obj.sign_msg_hash(msg_digest)
 
     @staticmethod
     def ecdsa_verify_by_msg(msg: bytes, r: int, s: int, public_key_obj: PublicKey) -> bool:
@@ -100,7 +100,7 @@ class TestEthAccount(unittest.TestCase):
         self.sig_bytes = self.sig_r + self.sig_s
 
     def test_init(self):
-        self.assertEqual(self.acc.priv, self.test_private)
+        self.assertEqual(int(self.acc.private_key.to_hex(), 16), self.test_private)
         self.assertEqual(self.acc.address, self.expected_address)
 
     def test_ecdsa(self):
