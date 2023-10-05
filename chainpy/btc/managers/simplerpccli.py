@@ -3,7 +3,6 @@ from time import sleep
 from typing import Union
 
 import requests
-from bridgeconst.consts import Chain
 from requests.auth import HTTPBasicAuth
 
 from chainpy.logger import global_logger
@@ -50,7 +49,7 @@ class SimpleBtcClient:
         except json.decoder.JSONDecodeError as e:
             global_logger.formatted_log(
                 "RPCException",
-                related_chain_name=Chain.BFC_MAIN,
+                related_chain_name="BTC",
                 msg="re-run after sleeping 60 secs"
             )
             sleep(60)
