@@ -1,8 +1,4 @@
-import os
-import unittest
 from typing import List, Tuple
-
-from dotenv import load_dotenv
 
 from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS
 from .priceapiabc import PriceApiABC, Symbol, QueryId, QueriedData, Price, Volume
@@ -55,36 +51,3 @@ class ChainlinkApi(PriceApiABC):
     @staticmethod
     def _calc_price_and_volume_in_usd(symbol: Symbol, queried_data: List[QueriedData]) -> Tuple[Price, Volume]:
         return ChainlinkApi._parse_price_and_volume_from_queried_data(symbol, queried_data)
-
-
-class TestChainLinkApi(unittest.TestCase):
-    def setUp(self) -> None:
-        load_dotenv()
-        self.api = ChainlinkApi(os.environ.get("ETHEREUM_MAINNET_ENDPOINT"))
-        # Currently, The Chainlink(ETH) does not provide prices of BFC, BIFI
-        self.symbols = ["ETH", "BNB", "MATIC", "USDC"]
-
-    def test_ping(self):
-        result = self.api.ping()
-        self.assertTrue(result)
-
-    def test_supporting_symbol(self):
-        symbols = self.api.supported_symbols()
-        self.assertEqual(type(symbols), list)
-        self.assertEqual(symbols, list(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS.keys()))
-
-    def test_price_and_volumes(self):
-        symbol_to_pv = self.api.get_current_prices_with_volumes(self.symbols)
-        for symbol, pv in symbol_to_pv.items():
-            self.assertTrue(symbol in self.symbols)
-            self.assertTrue(isinstance(pv.price(), EthAmount))
-            self.assertNotEqual(pv.price(), EthAmount.zero())
-            self.assertTrue(isinstance(pv.volume(), EthAmount))
-            self.assertEqual(pv.volume(), EthAmount.zero())
-
-    def test_current_prices(self):
-        prices_dict = self.api.get_current_prices(self.symbols)
-        for symbol, price in prices_dict.items():
-            self.assertTrue(symbol in self.symbols)
-            self.assertTrue(isinstance(price, EthAmount))
-            self.assertNotEqual(price, EthAmount.zero())

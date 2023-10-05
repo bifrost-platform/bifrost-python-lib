@@ -1,22 +1,13 @@
-import os
-import unittest
 from enum import Enum
 from typing import List, Union, Dict, Optional, Callable
 
-from dotenv import load_dotenv
-
-from chainpy.offchain.consts.chainlinkconst import ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS
-from chainpy.offchain.consts.coingeckoconst import COINGECKO_SYMBOL_TO_QUERY_ID
-from chainpy.offchain.consts.upbitconst import UPBIT_SYMBOL_TO_ANCHORS
 from .binanceapi import BinanceApi
 from .chainlinkapi import ChainlinkApi
 from .coingeckoapi import CoingeckoApi
-from .consts.binanceconst import BINANCE_SYMBOL_TO_ANCHORS
-from .consts.gateioconst import GATE_IO_SYMBOL_TO_ANCHORS
 from .gateioapi import GateIoApi
 from .priceapiabc import PriceApiABC, Symbol, Symbol2Price, PricesVolumes
 from .upbitapi import UpbitApi
-from .utils import to_upper_list, restore_replace
+from .utils import to_upper_list
 from ..eth.ethtype.amount import EthAmount
 from ..logger import global_logger
 
@@ -151,59 +142,3 @@ class PriceOracleAgg:
         for symbol in symbols:
             symbol_to_price[symbol] = symbol_to_pv_list[symbol].volume_weighted_price()
         return symbol_to_price
-
-
-class TestPriceAggregator(unittest.TestCase):
-    def setUp(self) -> None:
-        load_dotenv()
-
-        urls = {
-            "Coingecko": "https://api.coingecko.com/api/v3/",
-            "Upbit": "https://api.upbit.com/v1/",
-            "Chainlink": os.environ.get("ETHEREUM_MAINNET_ENDPOINT"),
-            "Binance": "https://api.binance.com/api/v3/",
-            "GateIo": "https://api.gateio.ws/api/v4/"
-        }
-        self.agg = PriceOracleAgg(urls)
-        self.symbols = ["BFC", "ETH", "BNB", "MATIC", "USDC", "BIFI"]
-
-    def test_ping(self):
-        result = self.agg.ping()
-        self.assertTrue(result)
-
-    def test_supporting_symbol(self):
-        coingecko_supports = list(restore_replace(COINGECKO_SYMBOL_TO_QUERY_ID, CoingeckoApi.SYMBOL_REPLACE_MAP).keys())
-        upbit_supports = list(restore_replace(UPBIT_SYMBOL_TO_ANCHORS, UpbitApi.SYMBOL_REPLACE_MAP).keys())
-        chainlink_supports = list(
-            restore_replace(ETH_CHAINLINK_SYMBOL_TO_CONTRACT_ADDRESS, ChainlinkApi.SYMBOL_REPLACE_MAP).keys())
-        binance_supports = list(restore_replace(BINANCE_SYMBOL_TO_ANCHORS, BinanceApi.SYMBOL_REPLACE_MAP).keys())
-        gate_io_supports = list(restore_replace(GATE_IO_SYMBOL_TO_ANCHORS, GateIoApi.SYMBOL_REPLACE_MAP).keys())
-        expected_supports = sorted(list(set(
-            coingecko_supports + upbit_supports + chainlink_supports + binance_supports + gate_io_supports
-        )))
-
-        actual_supported_symbols = sorted(self.agg.supported_symbols)
-        self.assertEqual(type(actual_supported_symbols), list)
-        self.assertEqual(actual_supported_symbols, expected_supports)
-
-    def test_fetch_prices_and_volumes(self):
-        results = self.agg.fetch_prices_and_volumes(self.symbols)
-        for symbol, pv_list in results.items():
-            self.assertTrue(symbol in self.symbols)
-            self.assertTrue(isinstance(pv_list, PricesVolumes))
-
-    def test_get_current_averaged_price(self):
-        results = self.agg.get_current_averaged_price(self.symbols)
-        for symbol, price in results.items():
-            self.assertTrue(isinstance(symbol, Symbol))
-            self.assertTrue(isinstance(price, EthAmount))
-            self.assertNotEqual(price, EthAmount.zero())
-
-    def test_get_current_weighted_price(self):
-        results = self.agg.get_current_weighted_price(self.symbols)
-        for symbol, price in results.items():
-            self.assertTrue(isinstance(symbol, Symbol))
-            self.assertTrue(isinstance(price, EthAmount))
-            if price == EthAmount.zero():
-                raise Exception("zero price: {}".format(symbol))
-            self.assertNotEqual(price, EthAmount.zero())

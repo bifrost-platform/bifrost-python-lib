@@ -1,8 +1,6 @@
 import json
 from typing import Optional, List
 
-from bridgeconst.consts import Asset
-
 from .utils import merge_dict
 from ..ethtype.account import EthAccount
 from ..ethtype.amount import EthAmount
@@ -144,12 +142,3 @@ class MultiChainManager:
     def decode_event(self, detected_event: DetectedEvent) -> tuple:
         contract_obj = self.get_contract_obj_on(detected_event.chain_name, detected_event.contract_name)
         return contract_obj.decode_event(detected_event.event_name, detected_event.data)
-
-    def world_balance(self, chain_name: str, asset: Asset = None, user_addr: EthAddress = None) -> EthAmount:
-        chain_manager = self.get_chain_manager_of(chain_name)
-        addr = user_addr if user_addr is not None else self.address
-        if asset is None or asset.is_coin():
-            return chain_manager.native_balance(user_addr)
-        else:
-            result = chain_manager.call_transaction(asset.name, "balanceOf", [addr.with_checksum()])[0]
-            return EthAmount(result, asset.decimal)

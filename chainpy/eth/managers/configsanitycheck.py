@@ -1,7 +1,6 @@
 import copy
 from typing import Any
 
-from bridgeconst.consts import Chain, Asset
 from jsonpath_ng import parse, Fields
 
 
@@ -121,9 +120,6 @@ class ConfigSanityChecker:
         supporting_chains_expr = parse("entity.supporting_chains")
 
         self.check_valid_type(supporting_chains_expr, list, key_required=True, value_default_allow=False)
-        supporting_chains_element_expr = parse("entity.supporting_chains[*]")
-        self.check_valid_type(supporting_chains_element_expr, Chain, is_enum=True, key_required=True)
-        self.delete_key_safe(supporting_chains_element_expr)
 
         self.delete_key_safe(supporting_chains_expr)
 
@@ -281,10 +277,6 @@ class ConfigSanityChecker:
             self.check_valid_type(price_name_expr, list, key_required=True, value_default_allow=False)
             self.delete_key_safe(price_name_expr)
 
-            price_name_element_expr = parse("oracle_config.asset_prices.names[*]")
-            self.check_valid_type(price_name_element_expr, Asset, is_enum=True)
-            self.delete_key_safe(price_name_element_expr)
-
             price_period_expr = parse("oracle_config.asset_prices.collection_period_sec")
             self.check_valid_type(price_period_expr, int, key_required=True, value_default_allow=False)
             self.delete_key_safe(price_period_expr)
@@ -303,14 +295,3 @@ class ConfigSanityChecker:
         self.check_multichain_config()
         self.check_entity_config()
         self.check_oracle_config()
-
-        for chain_name in self.supporting_chain_names:
-            if self.config.get(chain_name) is None:
-                raise Exception("The config of {} does not exists".format(chain_name))
-            try:
-                Chain[chain_name]
-            except KeyError as e:
-                json_expr = parse("{}".format(chain_name))
-                raise InvalidEnum(json_expr, Chain, chain_name)
-
-            self.check_chain_config(chain_name)

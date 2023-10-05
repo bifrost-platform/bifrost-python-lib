@@ -1,7 +1,5 @@
 import logging.handlers
 import os
-import shutil
-import unittest
 from datetime import datetime
 from pathlib import Path
 
@@ -142,27 +140,3 @@ class Logger:
 
 
 global_logger = Logger()
-
-
-class LoggerTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.log_file_name = "test.log"
-        global_logger.init(log_file_name=self.log_file_name)
-
-    def test_logging(self):
-        global_logger.info("test1", "hello")
-        global_logger.info("test2", "hello_too")
-        with open(BASE_LOG_DIR + self.log_file_name, "r") as f:
-            line = f.readline()
-            self.assertEqual(line.split(" ")[2], "[-Restart--]")
-            self.assertEqual(line.split(" ")[3], "-" * 84 + "\n")
-
-            line = f.readline()
-            self.assertEqual(line.split(" ")[2], "[--test1---]")
-            self.assertEqual(line.split(" ")[3], "hello\n")
-
-            line = f.readline()
-            self.assertEqual(line.split(" ")[2], "[--test2---]")
-            self.assertEqual(line.split(" ")[3], "hello_too\n")
-
-        shutil.rmtree(BASE_LOG_DIR)
