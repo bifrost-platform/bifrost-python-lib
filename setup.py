@@ -13,8 +13,7 @@ setup(
         "requests==2.31.0",
         "dataclasses-json==0.6.1",
         "prometheus-client==0.17.1",
-        "bridgeconst @ git+https://github.com/bifrost-platform/solidity-contract-configs@0.2.12",
         "jsonpath-ng==1.6.0",
-        "web3==6.10.0"
+        "web3==6.11.0"
     ]
 )
