@@ -1,5 +1,6 @@
 import logging.handlers
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -54,6 +55,7 @@ class Logger:
         """ generate __logger with "name" """
         self.__logger = logging.getLogger(self.__class__.NAME)
         self.__logger.setLevel(logger_config_global.level)
+        self.is_testnet = '--testnet' in sys.argv[1:] or '-t' in sys.argv[1:]
 
     def init(
         self,
@@ -131,9 +133,10 @@ class Logger:
     ):
         if log_id is None:
             return
-        msg = "{}:{}:{}".format(
+        msg = "{}:{}:{}:{}".format(
             address.hex()[:10] if address is not None else "NoAddress",
             related_chain_name,
+            "TESTNET" if self.is_testnet else "MAINNET",
             msg
         )
         self.info(log_id, msg)
