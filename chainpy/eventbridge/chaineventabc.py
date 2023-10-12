@@ -170,10 +170,6 @@ class ChainEventABC(metaclass=ABCMeta):
         """ A method to build the next event when the previous tx does not have receipt """
         pass
 
-    @abstractmethod
-    def decoded_dict(self) -> dict:
-        pass
-
     @staticmethod
     @abstractmethod
     def bootstrap(manager: "EventBridge", _range: Dict[str, List[int]]) -> List['ChainEventABC']:
